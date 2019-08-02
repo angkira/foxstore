@@ -20,6 +20,12 @@ export function toHashMap<T>(key: string): (list: T[]) => HashMap<T> {
                 acc[key] = item, {});
 }
 
+export interface StoreOptions {
+    needHashMap: boolean;
+    HashMapKey?: string;
+    HashMapFn?: (...args: any[]) => string | number | Symbol; // In the Future
+}
+
 /**
  * Parent class that contains all basic methods of Store
  *
@@ -47,6 +53,7 @@ export class ProtoStore<T> {
 
     constructor(
         initState?: T,
+        private options: StoreOptions,
         ) {
         if (initState) {
             this.patch(initState);
@@ -94,12 +101,8 @@ export class ProtoStore<T> {
      */
     patch(update: T): this {
         this.store$.next(
-            this.value ?
-                {
-                    ...this.value,
-                    ...update,
-                }
-                : update);
+                Object.assign({}, this.value, update,
+                    this.options.needHashMap ? this.getHashMap(update) : {}));
         // console.log('store patched by ', update); Turn on to watch Store changes
 
         return this;
@@ -124,6 +127,21 @@ export class ProtoStore<T> {
     dispatch(event: Event): this {
         this.eventDispatcher.dispatch(event);
         return this;
+    }
+
+    /**
+     * For every list-entiy in state returnes HashMap for easier using
+     * 
+     * @param mapKey 
+     */
+    private getHashMap(value: Object): HashMap<any> {
+        return  Object.keys(value)
+            .filter((key: string) => Array.isArray(this.value[key]))
+            .map((entityKey: string) =>
+                ({name: entityKey, value: toHashMap(this.options.HashMapKey)(this.value[entityKey])}))
+            .reduce((mapObject: HashMap<any>, entity: {name: string, value: HashMap<any>}) => {
+                return mapObject[`${entity.name}_Map`] = entity.value;
+            }, {});
     }
 
     /**
