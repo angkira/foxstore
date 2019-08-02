@@ -1,0 +1,15 @@
+{
+  "name": "rxstore",
+  "version": "1.0.0",
+  "description": "Reactive Event-Driven Storage for WebApplications based on RxJs (reactive extensions)",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Yuriy Medvedev",
+  "license": "ISC",
+  "dependencies": {
+    "ramda": "^0.26.1",
+    "rxjs": "^6.5.2"
+  }
+}
