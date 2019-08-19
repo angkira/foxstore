@@ -21,6 +21,7 @@ export function toHashMap<T>(key: string): (list: T[]) => HashMap<T> {
 }
 
 export interface StoreOptions {
+    storeName: string;
     needHashMap: boolean;
     HashMapKey?: string;
     HashMapFn?: (...args: any[]) => string | number | Symbol; // In the Future
@@ -53,7 +54,7 @@ export class ProtoStore<T> {
 
     constructor(
         initState?: T,
-        private options: StoreOptions,
+        private options?: StoreOptions,
         ) {
         if (initState) {
             this.patch(initState);
@@ -113,8 +114,9 @@ export class ProtoStore<T> {
      *
      * @memberof ProtoStore
      */
-    clear(): void {
+    clear(): this {
         this.store$.next({});
+        return this;
     }
 
     /**
@@ -126,6 +128,19 @@ export class ProtoStore<T> {
      */
     dispatch(event: Event): this {
         this.eventDispatcher.dispatch(event);
+        return this;
+    }
+
+    /**
+     * This method lets to work with events dynamically
+     * 
+     * @param eventName - event`s name to listen
+     * @param callbackFn - function that gets payload of event as argument
+     */
+    on(eventName: string, callbackFn: Function): this {
+        this.eventDispatcher
+            .listen(eventName)
+            .subscribe((event: Event) => callbackFn(event.payload));
         return this;
     }
 
