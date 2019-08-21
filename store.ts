@@ -16,8 +16,8 @@ export function toHashMap<T>(key: string): (list: T[]) => HashMap<T> {
     return (list: T[]) =>
         list.reduce((
             acc: HashMap<T>,
-            item: T & { [key: string]: string | number | Symbol}) =>
-                acc[key] = item, {});
+            item: T & { key: string | number | Symbol}) =>
+                acc[item[key]] = item, {});
 }
 
 export interface StoreOptions {
