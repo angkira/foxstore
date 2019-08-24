@@ -122,12 +122,14 @@ export class ProtoStore<T> {
     /**
      * Ethernal method to dispatch Store Event
      *
-     * @param {Event} event
+     * @param {Event | string} event - new event of name for empty event (without payload) like InitEvent
      * @returns {this}
      * @memberof ProtoStore
      */
-    dispatch(event: Event): this {
-        this.eventDispatcher.dispatch(event);
+    dispatch(event: Event | string): this {
+        event instanceof Event ?
+            this.eventDispatcher.dispatch(event)
+            : this.eventDispatcher.dispatch(new Event(event));
         return this;
     }
 
