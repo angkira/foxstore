@@ -18,7 +18,10 @@ interface StoreModel {
 @Injectable()
 export class MainStore extends ProtoStore<StoreModel> {
 
-   constructor(private docService: DocumentService) { super(); }
+   constructor(
+      private docService: DocumentService,
+      private emailService: EmailService,
+      ) { super(); }
 
    @Effect('storeLoaded')
    sendEmail(payload: any): void {
