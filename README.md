@@ -10,7 +10,7 @@ Describe Actions, Reducers and Effects by selecting event-names.
 ```typescript
 
 // Model of Store to make easier to navigate
-const StoreModel = {
+interface StoreModel {
    documents: Doc,
 };
 
