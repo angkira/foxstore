@@ -8,10 +8,38 @@ Use decorators for creating your own store!
 Describe Actions, Reducers and Effects by selecting event-names.
 
 ```typescript
+
+// Model of Store to make easier to navigate
+const StoreModel = {
+   documents: Doc,
+};
+
+@Store()
+@Injectable()
+export class MainStore extends ProtoStore<StoreModel> {
+
+   constructor(private docService: DocumentService) { super(); }
+
    @Effect('storeLoaded')
    sendEmail(payload: any): void {
      this.emailService.send('Inited!');
-}
+   }
+
+   @Action('loadDocs', {writeAs: 'documents'})
+   loadTemplates(filter: IFilter): Event {
+     const docs$ = this.docService.getDocuments();
+
+     // Returnes event cause it is one event-flow
+     return new StoreEvent(
+      'documentTemplatesLoaded',
+      docs$, // returnes stream as payload in Event
+      true); // flag 'isAsync' for event with stream-data
+   }
+}  
+   ...
+      // Somewhere in component.ts
+      this.docs$ = this.store.select('documents'); // Here IDE will offer to you list of entities which you set in generic
+      this.store.dispatch('loadDocs');
 ```
 Flux-likely decision that contains simply types and methods to create Event-Driven Asynchronous Storage.
 
