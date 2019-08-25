@@ -11,8 +11,8 @@ Describe Actions, Reducers and Effects by selecting event-names.
    @Effect('storeLoaded')
    sendEmail(payload: any): void {
      this.emailService.send('Inited!');
-```}
-
+}
+```
 Flux-likely decision that contains simply types and methods to create Event-Driven Asynchronous Storage.
 
 Was tested with Angular-applications.
