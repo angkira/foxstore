@@ -3,17 +3,20 @@ Reactive Event-Driven Store
 
 Simply analog of NgRx, if you wanna Reactive State Management, but do not want to use big structures (like NgRx) in dependencies. 
 
-#Install
+# Install
    Easy! Just install it from NPM
 ```
    npm install foxstore
 ```
 
-#Usage
+# Usage
 
 Use decorators for creating your own store!
 
 Describe Actions, Reducers and Effects by selecting event-names.
+
+Be careful! Store-decorator now works only with Services.
+In Components you can use it only as class-parent. So, in components it isn`t nessesary cause you have own methods :)
 
 ```typescript
 
