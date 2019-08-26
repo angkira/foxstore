@@ -1,4 +1,4 @@
-# reactive_store
+# Foxstore
 Reactive Event-Driven Store
 
 Simply analog of NgRx, if you wanna Reactive State Management, but do not want to use big structures (like NgRx) in dependencies. 
@@ -49,7 +49,8 @@ Flux-likely decision that contains simply types and methods to create Event-Driv
 Was tested with Angular-applications.
 
 *** 
-Also, you can create ReactiveStateful Component by extending Store class. Then you will get component-store with own state$, patch() etc. It is useful if you have Component with a lot of dynamic data.
+Also, you can create ReactiveStateful Component by extending Store class. Then you will get component-store with own select(), patch() etc. It is useful if you have Component with a lot of dynamic data.
+Example you can see here https://github.com/angkira/foxstore-example
 
 
-tags: rxjs redux flux storage state reactive ngrx rx 
+tags: foxstore rxjs redux flux storage state reactive ngrx rx 
