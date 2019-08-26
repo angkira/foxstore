@@ -8,9 +8,9 @@ const REDUCER_METAKEY = '@StoreReducers';
 const ACTION_METAKEY = '@StoreActions';
 const EFFECT_METAKEY = '@StoreEffects';
 
-type ActionFn  = (payload: any, state?: any) => Event;
-type ReducerFn = (payload: any, state?: any) => typeof state;
-type EffectFn  = (payload: any, state?: any) => void;
+export type ActionFn  = (payload: any, state?: any) => Event;
+export type ReducerFn = (payload: any, state?: any) => typeof state;
+export type EffectFn  = (payload: any, state?: any) => void;
 
 const simplyReducer: ReducerFn = (fieldName: string) =>
     (payload: any, state: any) =>
@@ -30,7 +30,7 @@ interface IActionOptions {
  *
  * @class MetaAction
  */
-class MetaAction {
+export class MetaAction {
     constructor(
         public eventName: string,
         public action: ActionFn,
@@ -43,7 +43,7 @@ class MetaAction {
  *
  * @class MetaReducer
  */
-class MetaReducer {
+export class MetaReducer {
     constructor(
         public eventName: string,
         public reducer: ReducerFn,
@@ -56,7 +56,7 @@ class MetaReducer {
  *
  * @class MetaEffect
  */
-class MetaEffect {
+export class MetaEffect {
     constructor(
         public eventName: string,
         public effect: EffectFn,
@@ -73,7 +73,7 @@ class MetaEffect {
  * @returns {MethodDecorator}
  */
 export function Action(eventName: string, options?: IActionOptions): MethodDecorator {
-    return function (store: ProtoStore<any>, propertyKey: string, descriptor: PropertyDescriptor) {
+    return function (store: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) {
         const actions: MetaAction[] = Reflect.getMetadata(ACTION_METAKEY, store.constructor) || [];
         const action = descriptor.value as ActionFn;
 
@@ -91,7 +91,7 @@ export function Action(eventName: string, options?: IActionOptions): MethodDecor
  * @returns {MethodDecorator}
  */
 export function Reducer(eventName: string): MethodDecorator {
-    return function (store: ProtoStore<any>, propertyKey: string, descriptor: PropertyDescriptor) {
+    return function (store: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) {
         const reducer: ReducerFn = descriptor.value;
         const reducers: MetaReducer[] = Reflect.getMetadata(REDUCER_METAKEY, store.constructor) || [];
         reducers.push(new MetaReducer(eventName, reducer));
@@ -107,7 +107,7 @@ export function Reducer(eventName: string): MethodDecorator {
  * @returns {MethodDecorator}
  */
 export function Effect(eventName: string): MethodDecorator {
-    return function (store: ProtoStore<any>, propertyKey: string, descriptor: PropertyDescriptor) {
+    return function (store: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) {
         const effect = descriptor.value;
         const effects: MetaEffect[] = Reflect.getMetadata(EFFECT_METAKEY, store.constructor) || [];
         effects.push(new MetaEffect(eventName, effect));
@@ -126,7 +126,7 @@ export function Effect(eventName: string): MethodDecorator {
  * @returns {*}
  */
 export function Store(initState?: any, customDispatcher?: Dispatcher): any {
-    return function (target: {new(...args: any[]): any}): (args: any[]) => ProtoStore<typeof initState> {
+    return function (target: any): (args: any[]) => ProtoStore<typeof initState> {
         // save a reference to the original constructor
         const original = target;
 

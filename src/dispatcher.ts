@@ -1,5 +1,5 @@
 import { ReplaySubject, Observable } from 'rxjs';
-import { filter, tap, takeWhile } from 'rxjs/operators';
+import { filter, takeWhile } from 'rxjs/operators';
 
 /**
  * Atomaric data-unit, that may contain info
@@ -39,6 +39,7 @@ export class Dispatcher {
     listen(eventName: string): Observable<Event> {
         return this.eventBus$
             .pipe(
+                // @ts-ignore
                 takeWhile((event: Event) =>
                     event.name !== this.destroyEvent.name),
                 filter((event: Event) =>
