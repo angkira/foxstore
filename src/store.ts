@@ -36,7 +36,7 @@ export interface StoreOptions {
  */
 export class ProtoStore<T> {
     /**
-     * Subject that contains 
+     * Subject that contains
      *
      * @private
      * @type {(ReplaySubject<T | {}>)}
@@ -70,11 +70,10 @@ export class ProtoStore<T> {
      * @returns {Observable<T[K]>}
      * @memberof ProtoStore
      */
-    select<K extends keyof T>(entityName?: K): Observable<T[K] | T> {
+    select<K extends keyof T>(entityName?: K): Observable<T[K] | T | {}> {
         return (entityName ?
             this.store$.pipe(
-                // @ts-ignore
-                rxMap(path(<string>entityName)),
+                rxMap(path([entityName as string])),
             ) : this.store$.asObservable())
             .pipe(
                 // @ts-ignore
@@ -105,7 +104,7 @@ export class ProtoStore<T> {
     patch(update: T): this {
         this.store$.next(
                 Object.assign({}, this.value, update,
-                    this.options && this.options.needHashMap ?  
+                    this.options && this.options.needHashMap ?
                         this.getHashMap(update) : {}));
         // console.log('store patched by ', update); Turn on to watch Store changes
 
@@ -138,7 +137,7 @@ export class ProtoStore<T> {
 
     /**
      * This method lets to work with events dynamically
-     * 
+     *
      * @param eventName - event`s name to listen
      * @param callbackFn - function that gets payload of event as argument
      */
@@ -151,8 +150,8 @@ export class ProtoStore<T> {
 
     /**
      * For every list-entity in state returnes HashMap for easier using
-     * 
-     * @param mapKey 
+     *
+     * @param mapKey
      */
     private getHashMap(value: T): HashMap<any> {
         if (!this.options || !this.options.HashMapKey) {
@@ -170,7 +169,7 @@ export class ProtoStore<T> {
                 }, {});
         }
 
-        
+
     }
 
     /**
