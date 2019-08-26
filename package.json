@@ -1,8 +1,8 @@
 {
   "name": "foxstore",
-  "version": "1.0.6",
+  "version": "1.0.8",
   "description": "Reactive Event-Driven Storage for WebApplications based on RxJs (reactive extensions)",
-  "main": "src/index",
+  "main": "lib/index",
   "keywords": [
     "rxjs",
     "reactive",
@@ -19,7 +19,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/angkira/reactive_store.git"
+    "url": "https://github.com/angkira/foxstore.git"
   },
   "author": "Yuriy Medvedev",
   "license": "ISC",
