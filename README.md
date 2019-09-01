@@ -1,6 +1,7 @@
 # Foxstore
 Reactive Event-Driven Store
-
+Inline-style: 
+![alt text](https://raw.githubusercontent.com/angkira/foxstore/master/foxstore-github.jpg "Logo")
 Simply analog of NgRx, if you wanna Reactive State Management, but do not want to use big structures (like NgRx) in dependencies. 
 
 # Install
