@@ -64,5 +64,7 @@ Was tested with Angular-applications.
 Also, you can create ReactiveStateful Component by extending Store class. Then you will get component-store with own select(), patch() etc. It is useful if you have Component with a lot of dynamic data.
 Example you can see here https://github.com/angkira/foxstore-example
 
+I`m so sorry, guys, but using @Store decorator now is conflicting with Angular Singletone Service using. Now I`m try to fix it in my freetime and will push the fix as soon as possible! Now you can use in as class without dependencies or find the way to provide it as singletone in module. I`m open to PullRequests!
+
 
 tags: foxstore rxjs redux flux storage state reactive ngrx rx 
