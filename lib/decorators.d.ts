@@ -80,4 +80,11 @@ export declare function Effect(eventName: string): MethodDecorator;
  * @returns {*}
  */
 export declare function Store(initState?: any, customDispatcher?: Dispatcher): any;
+/**
+ * Setup handling of Reducers, Actions, SideEffects without Decorator,
+ * Use it in Constructor if you use Angular Injectable
+ * @param initState
+ * @param customDispatcher
+ */
+export declare const setupStoreEvents: <State>(initState?: State | undefined, customDispatcher?: Dispatcher | undefined) => (newInstance: any) => void;
 export {};

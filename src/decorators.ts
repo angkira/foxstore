@@ -128,23 +128,41 @@ export function Effect(eventName: string): MethodDecorator {
 export function Store(initState?: any, customDispatcher?: Dispatcher): any {
     return function (target: any): (args: any[]) => ProtoStore<typeof initState> {
         // save a reference to the original constructor
-        const original = target;
 
         // The new constructor behaviour
         const f: (args: any) => ProtoStore<typeof initState> = function (...args: any[]): ProtoStore<typeof initState> {
             // const newInstance = new ProtoStore<typeof initState>(initState);
             // newInstance['__proto__'] = original.prototype;
-            const newInstance = new original(...args);
+            const newInstance = new target(...args);
 
-            const dispatcher = customDispatcher ||
+            
+
+            return newInstance;
+        };
+
+        f.prototype = target['__proto__'];
+
+        return f;
+    };
+}
+/**
+ * Setup handling of Reducers, Actions, SideEffects without Decorator,
+ * Use it in Constructor if you use Angular Injectable
+ * @param initState 
+ * @param customDispatcher 
+ */
+export const setupStoreEvents = <State>(initState?: State, customDispatcher?: Dispatcher) =>
+    (newInstance: any) => {
+        const constructor = newInstance['__proto__'].constructor;
+        const dispatcher = customDispatcher ||
                 Reflect.get(newInstance, 'dispatcher') as Dispatcher;
             const state$ = Reflect.get(newInstance, 'state$') as ReplaySubject<any>;
 
-            const effects: MetaEffect[] = Reflect.getMetadata(EFFECT_METAKEY, target)
+            const effects: MetaEffect[] = Reflect.getMetadata(EFFECT_METAKEY, constructor)
                 || [];
-            const reducers: MetaReducer[] = Reflect.getMetadata(REDUCER_METAKEY, target)
+            const reducers: MetaReducer[] = Reflect.getMetadata(REDUCER_METAKEY, constructor)
                 || [];
-            const actions: MetaAction[] = Reflect.getMetadata(ACTION_METAKEY, target)
+            const actions: MetaAction[] = Reflect.getMetadata(ACTION_METAKEY, constructor)
                 || [];
 
             
@@ -198,12 +216,4 @@ export function Store(initState?: any, customDispatcher?: Dispatcher): any {
             effects.forEach(effectHandler);
             reducers.forEach(reducerHandler);
             actions.forEach(actionHandler);
-
-            return newInstance;
-        };
-
-        f.prototype = original['__proto__'];
-
-        return f;
-    };
-}
+    }

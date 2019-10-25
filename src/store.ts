@@ -3,7 +3,7 @@ import { map as rxMap, takeUntil, shareReplay} from 'rxjs/operators';
 import { last, path } from 'ramda';
 import { Dispatcher, Event } from './dispatcher';
 
-type HashMap<T> = {[key: string]: T}
+export type HashMap<T> = {[key: string]: T}
 /**
  * Curried function-helper to convert collection to hashMap by choosen key
  *

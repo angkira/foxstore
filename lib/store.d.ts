@@ -1,6 +1,6 @@
 import { Observable } from 'rxjs';
 import { Event } from './dispatcher';
-declare type HashMap<T> = {
+export declare type HashMap<T> = {
     [key: string]: T;
 };
 /**
@@ -103,4 +103,3 @@ export declare class ProtoStore<T> {
      */
     destroy(): void;
 }
-export {};
