@@ -127,10 +127,8 @@ export class ProtoStore<InitState, EventScheme extends Object = {}> {
 
     /**
      * Ethernal method to dispatch Store Event
-     *
-     * @param {Event | string} event - new event of name for empty event (without payload) like InitEvent
-     * @returns {this}
-     * @memberof ProtoStore
+     * @param eventName 
+     * @param payload 
      */
     dispatch<Payload>(eventName: keyof EventScheme, payload?: Payload): this {
         this.eventDispatcher.dispatch(
