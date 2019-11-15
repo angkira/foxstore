@@ -48,11 +48,11 @@ export declare class MetaEffect {
 export declare type MetaType = MetaAction | MetaReducer | MetaEffect;
 export declare type EventScheme = {
     [eventName: string]: {
-        actions: MetaAction[];
-        reducers: MetaReducer[];
-        effects: MetaEffect[];
+        actions?: MetaAction[];
+        reducers?: MetaReducer[];
+        effects?: MetaEffect[];
     };
-};
+} & Object;
 /**
  * Action MethodDecorator for Store class, works by metadata of constructor.
  *

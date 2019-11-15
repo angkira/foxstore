@@ -69,10 +69,10 @@ export class MetaEffect {
 export type MetaType = MetaAction | MetaReducer | MetaEffect;
 
 export type EventScheme = { [eventName: string]: {
-    actions: MetaAction[],
-    reducers: MetaReducer[],
-    effects: MetaEffect[],
-} }
+    actions?: MetaAction[],
+    reducers?: MetaReducer[],
+    effects?: MetaEffect[],
+} } & Object;
 
 /**
  * Action MethodDecorator for Store class, works by metadata of constructor.
@@ -165,7 +165,7 @@ export function Store<InitState extends Object = {}>(
             const metadataEventScheme: EventScheme = {} || eventScheme;
 
             const entityReducer = (entityName: 'actions' | 'effects' | 'reducers') =>
-                (scheme: EventScheme, entity: EventScheme[string][typeof entityName][0]) => {
+                (scheme: EventScheme, entity: MetaType) => {
                     scheme[entity.eventName] = scheme[entity.eventName] 
                                                 || { [entityName]: [] };
                     (scheme[entity.eventName][entityName] as (typeof entity)[]).push(entity);
@@ -204,24 +204,20 @@ export const setupStoreEvents = (eventScheme: EventScheme = {}) =>
                 actions: actionHandler,
             };
 
-            type Keys = keyof typeof handlersMap;
+            type Keys = keyof EventScheme[string];
 
             type EventBindings = {
                 [key in Keys]: MetaType[];
             };
 
             const entityLists: EventBindings = values(eventScheme)
-                .reduce((acc: EventBindings, event: EventBindings) => {
-                    keys(event)
+                .reduce((acc: EventBindings | any, event: EventBindings | any) => {
+                    (keys(event) as Keys[])
                         .map((key: Keys) => {
                             acc[key] = acc[key].concat(event[key]);
                         });
                     return acc;
-                }, {
-                    actions:  [],
-                    reducers: [],
-                    effects:  [],
-                });
+                }, {});
 
             keys(entityLists).forEach((entityType: Keys) =>
                 forEach<any>(handlersMap[entityType])(entityLists[entityType]));
