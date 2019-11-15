@@ -45,7 +45,8 @@ export declare class MetaEffect {
     options?: IActionOptions | undefined;
     constructor(eventName: string, effect: EffectFn, options?: IActionOptions | undefined);
 }
-declare type EventScheme = {
+export declare type MetaType = MetaAction | MetaReducer | MetaEffect;
+export declare type EventScheme = {
     [eventName: string]: {
         actions: MetaAction[];
         reducers: MetaReducer[];
