@@ -314,10 +314,10 @@ function actionMetaHandler(instance: ProtoStore<any>) {
  * @param options - extra options for Store
  * @param eventScheme - scheme of events and its handlers
  */
-export const createStore = <InitState>(
+export const createStore = <InitState, SchemeType extends EventScheme>(
     initState?: InitState,
     customDispatcher?: Dispatcher,
     options: StoreOptions = DefaultStoreOptions,
-    eventScheme: EventScheme = {},
-    ) => setupStoreEvents(eventScheme)
-        (new ProtoStore<InitState, typeof eventScheme>(initState, options, customDispatcher))
+    eventScheme: SchemeType | Object = {},
+    ) => setupStoreEvents(eventScheme as EventScheme)
+        (new ProtoStore<InitState, SchemeType>(initState, options, customDispatcher))

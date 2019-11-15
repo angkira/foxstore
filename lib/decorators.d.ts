@@ -102,5 +102,5 @@ export declare const setupStoreEvents: (eventScheme?: EventScheme) => (newInstan
  * @param options - extra options for Store
  * @param eventScheme - scheme of events and its handlers
  */
-export declare const createStore: <InitState>(initState?: InitState | undefined, customDispatcher?: Dispatcher | undefined, options?: StoreOptions, eventScheme?: EventScheme) => ProtoStore<any, {}>;
+export declare const createStore: <InitState, SchemeType extends EventScheme>(initState?: InitState | undefined, customDispatcher?: Dispatcher | undefined, options?: StoreOptions, eventScheme?: Object | SchemeType) => ProtoStore<any, {}>;
 export {};
