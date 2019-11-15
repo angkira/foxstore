@@ -26,8 +26,8 @@ export declare const DefaultStoreOptions: StoreOptions;
  * @class ProtoStore
  * @template InitState - type | interface for state of Store
  */
-export declare class ProtoStore<InitState, EventScheme extends Object = {}> {
-    private options?;
+export declare class ProtoStore<InitState, EventScheme = HashMap<any>> {
+    private options;
     /**
      * Subject that contains
      *
@@ -42,7 +42,7 @@ export declare class ProtoStore<InitState, EventScheme extends Object = {}> {
      * @memberof ProtoStore
      */
     readonly eventDispatcher: Dispatcher;
-    constructor(initState?: InitState, options?: StoreOptions | undefined, customDispatcher?: Dispatcher);
+    constructor(initState?: InitState, options?: StoreOptions | null, customDispatcher?: Dispatcher | null);
     /**
      * Selecting stream with data from Store by key.
      *
@@ -79,7 +79,7 @@ export declare class ProtoStore<InitState, EventScheme extends Object = {}> {
      * @param eventName
      * @param payload
      */
-    dispatch<Payload>(eventName: keyof EventScheme, payload?: Payload): this;
+    dispatch<Payload>(eventName: keyof EventScheme & string, payload?: Payload): this;
     /**
      * This method lets to work with events dynamically
      *

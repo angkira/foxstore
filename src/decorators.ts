@@ -1,4 +1,4 @@
-import { ProtoStore, StoreOptions, DefaultStoreOptions } from './store';
+import { ProtoStore, StoreOptions, DefaultStoreOptions, HashMap } from './store';
 import { withLatestFrom, mergeMap, take, shareReplay } from 'rxjs/operators';
 import { Dispatcher, Event } from './dispatcher';
 import { of, Subscription, Observable } from 'rxjs';
@@ -190,8 +190,8 @@ export function Store<InitState extends Object = {}>(
  * Setup handling of Reducers, Actions, SideEffects without Decorator,
  * Use it in Constructor if you use Angular Injectable
  */
-export const setupStoreEvents = (eventScheme: EventScheme = {}) =>
-    (newInstance: ProtoStore<any>) => {
+export const setupStoreEvents = <State, Scheme>(eventScheme: EventScheme = {}) =>
+    (newInstance: ProtoStore<State, Scheme>) => {
             const reducerHandler = reducerMetaHandler(newInstance);
 
             const effectHandler = effectMetaHandler(newInstance);
@@ -314,10 +314,11 @@ function actionMetaHandler(instance: ProtoStore<any>) {
  * @param options - extra options for Store
  * @param eventScheme - scheme of events and its handlers
  */
-export const createStore = <InitState, SchemeType extends EventScheme>(
-    initState?: InitState,
-    customDispatcher?: Dispatcher,
-    options: StoreOptions = DefaultStoreOptions,
-    eventScheme: SchemeType | Object = {},
-    ) => setupStoreEvents(eventScheme as EventScheme)
+export const createStore = <InitState,
+    SchemeType extends EventScheme = HashMap<any>>(
+        initState?: InitState,
+        customDispatcher?: Dispatcher | null,
+        options?: StoreOptions | null,
+        eventScheme?: SchemeType | Object,
+    ) => setupStoreEvents<InitState, SchemeType>(eventScheme as EventScheme)
         (new ProtoStore<InitState, SchemeType>(initState, options, customDispatcher))

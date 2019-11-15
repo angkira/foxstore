@@ -38,7 +38,7 @@ export const DefaultStoreOptions: StoreOptions = {
  * @class ProtoStore
  * @template InitState - type | interface for state of Store
  */
-export class ProtoStore<InitState, EventScheme extends Object = {}> {
+export class ProtoStore<InitState, EventScheme = HashMap<any>> {
     /**
      * Subject that contains
      *
@@ -56,8 +56,8 @@ export class ProtoStore<InitState, EventScheme extends Object = {}> {
 
     constructor(    
         initState?: InitState,
-        private options?: StoreOptions,
-        customDispatcher?: Dispatcher,
+        private options: StoreOptions | null = DefaultStoreOptions,
+        customDispatcher?: Dispatcher | null,
         ) {        
         if (initState) {
             this.patch(initState);
@@ -130,7 +130,7 @@ export class ProtoStore<InitState, EventScheme extends Object = {}> {
      * @param eventName 
      * @param payload 
      */
-    dispatch<Payload>(eventName: keyof EventScheme, payload?: Payload): this {
+    dispatch<Payload>(eventName: keyof EventScheme & string, payload?: Payload): this {
         this.eventDispatcher.dispatch(
             new Event(eventName as string, payload));
         return this;

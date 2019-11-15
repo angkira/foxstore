@@ -1,4 +1,4 @@
-import { ProtoStore, StoreOptions } from './store';
+import { ProtoStore, StoreOptions, HashMap } from './store';
 import { Dispatcher, Event } from './dispatcher';
 import 'reflect-metadata';
 export declare type ActionFn = (payload: any, state?: any) => Event;
@@ -93,7 +93,7 @@ export declare function Store<InitState extends Object = {}>(initState?: InitSta
  * Setup handling of Reducers, Actions, SideEffects without Decorator,
  * Use it in Constructor if you use Angular Injectable
  */
-export declare const setupStoreEvents: (eventScheme?: EventScheme) => (newInstance: ProtoStore<any, {}>) => ProtoStore<any, {}>;
+export declare const setupStoreEvents: <State, Scheme>(eventScheme?: EventScheme) => (newInstance: ProtoStore<State, Scheme>) => ProtoStore<State, Scheme>;
 /**
  * Best way to create Store without classes.
  * Just set eventything and get new Store
@@ -102,5 +102,5 @@ export declare const setupStoreEvents: (eventScheme?: EventScheme) => (newInstan
  * @param options - extra options for Store
  * @param eventScheme - scheme of events and its handlers
  */
-export declare const createStore: <InitState, SchemeType extends EventScheme>(initState?: InitState | undefined, customDispatcher?: Dispatcher | undefined, options?: StoreOptions, eventScheme?: Object | SchemeType) => ProtoStore<any, {}>;
+export declare const createStore: <InitState, SchemeType extends EventScheme = HashMap<any>>(initState?: InitState | undefined, customDispatcher?: Dispatcher | null | undefined, options?: StoreOptions | null | undefined, eventScheme?: Object | SchemeType | undefined) => ProtoStore<InitState, SchemeType>;
 export {};
