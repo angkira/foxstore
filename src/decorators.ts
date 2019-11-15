@@ -66,9 +66,9 @@ export class MetaEffect {
     ) {}
 }
 
-type MetaType = MetaAction | MetaReducer | MetaEffect;
+export type MetaType = MetaAction | MetaReducer | MetaEffect;
 
-type EventScheme = { [eventName: string]: {
+export type EventScheme = { [eventName: string]: {
     actions: MetaAction[],
     reducers: MetaReducer[],
     effects: MetaEffect[],
