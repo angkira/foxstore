@@ -1,8 +1,10 @@
-import { ProtoStore } from './store';
+import { ProtoStore, StoreOptions, DefaultStoreOptions } from './store';
 import { withLatestFrom, mergeMap, take, shareReplay } from 'rxjs/operators';
 import { Dispatcher, Event } from './dispatcher';
-import { ReplaySubject, of } from 'rxjs';
+import { of, Subscription, Observable } from 'rxjs';
 import 'reflect-metadata';
+
+import { keys, values, forEach } from 'ramda';
 
 const REDUCER_METAKEY = '@StoreReducers';
 const ACTION_METAKEY = '@StoreActions';
@@ -64,6 +66,14 @@ export class MetaEffect {
     ) {}
 }
 
+type MetaType = MetaAction | MetaReducer | MetaEffect;
+
+type EventScheme = { [eventName: string]: {
+    actions: MetaAction[],
+    reducers: MetaReducer[],
+    effects: MetaEffect[],
+} }
+
 /**
  * Action MethodDecorator for Store class, works by metadata of constructor.
  *
@@ -115,6 +125,7 @@ export function Effect(eventName: string): MethodDecorator {
     };
 }
 
+
 /**
  * Store decorator. Can be used for Injectable services like in Angular
  * Waiting for Decorators will became not "experimental" to work with types correctly.
@@ -125,17 +136,47 @@ export function Effect(eventName: string): MethodDecorator {
  * @param {Dispatcher} [customDispatcher]
  * @returns {*}
  */
-export function Store(initState?: any, customDispatcher?: Dispatcher): any {
-    return function (target: any): (args: any[]) => ProtoStore<typeof initState> {
+export function Store<InitState extends Object = {}>(
+    initState?: InitState,
+    customDispatcher?: Dispatcher,
+    eventScheme: EventScheme = {},
+    ): any {
+    return function (target: any = Object): (args: any[]) => ProtoStore<typeof initState> {
         // save a reference to the original constructor
 
         // The new constructor behaviour
-        const f: (args: any) => ProtoStore<typeof initState> = function (...args: any[]): ProtoStore<typeof initState> {
+        const f: (args: any) => ProtoStore<InitState> = function (...args: any[]): ProtoStore<InitState> {
             // const newInstance = new ProtoStore<typeof initState>(initState);
             // newInstance['__proto__'] = original.prototype;
             const newInstance = new target(...args);
 
-            
+
+            const constructor = newInstance['__proto__'].constructor;
+
+            newInstance.eventDispatcher = customDispatcher || newInstance.eventDispatcher;
+
+            const effects: MetaEffect[] = Reflect.getMetadata(EFFECT_METAKEY, constructor)
+                || [];
+            const reducers: MetaReducer[] = Reflect.getMetadata(REDUCER_METAKEY, constructor)
+                || [];
+            const actions: MetaAction[] = Reflect.getMetadata(ACTION_METAKEY, constructor)
+                || [];
+
+            const metadataEventScheme: EventScheme = {} || eventScheme;
+
+            const entityReducer = (entityName: 'actions' | 'effects' | 'reducers') =>
+                (scheme: EventScheme, entity: EventScheme[string][typeof entityName][0]) => {
+                    scheme[entity.eventName] = scheme[entity.eventName] 
+                                                || { [entityName]: [] };
+                    (scheme[entity.eventName][entityName] as (typeof entity)[]).push(entity);
+                    return scheme;
+                }
+
+            effects.reduce(entityReducer('effects'), metadataEventScheme);
+            actions.reduce(entityReducer('actions'), metadataEventScheme);
+            reducers.reduce(entityReducer('reducers'), metadataEventScheme);
+
+            setupStoreEvents(metadataEventScheme)(newInstance);
 
             return newInstance;
         };
@@ -148,72 +189,139 @@ export function Store(initState?: any, customDispatcher?: Dispatcher): any {
 /**
  * Setup handling of Reducers, Actions, SideEffects without Decorator,
  * Use it in Constructor if you use Angular Injectable
- * @param initState 
- * @param customDispatcher 
  */
-export const setupStoreEvents = <State>(initState?: State, customDispatcher?: Dispatcher) =>
-    (newInstance: any) => {
-        const constructor = newInstance['__proto__'].constructor;
-        const dispatcher = customDispatcher ||
-                Reflect.get(newInstance, 'dispatcher') as Dispatcher;
-            const state$ = Reflect.get(newInstance, 'state$') as ReplaySubject<any>;
+export const setupStoreEvents = (eventScheme: EventScheme = {}) =>
+    (newInstance: ProtoStore<any>) => {
+            const reducerHandler = reducerMetaHandler(newInstance);
 
-            const effects: MetaEffect[] = Reflect.getMetadata(EFFECT_METAKEY, constructor)
-                || [];
-            const reducers: MetaReducer[] = Reflect.getMetadata(REDUCER_METAKEY, constructor)
-                || [];
-            const actions: MetaAction[] = Reflect.getMetadata(ACTION_METAKEY, constructor)
-                || [];
+            const effectHandler = effectMetaHandler(newInstance);
 
-            
-            const getEntityPayload = (entity: MetaAction | MetaReducer | MetaEffect) =>
-              dispatcher
-                .listen(entity.eventName)
-                .pipe(
-                    // tap(x => console.log(x)), // TODO: create Log-plugin to log events. ReduxTools - maybe
-                    mergeMap((event: Event) =>
-                        (event.async ?
-                            event.payload
-                            : of(event.payload))
-                                .pipe(take(1))),
-                    withLatestFrom(state$.pipe(take(1))),
-                    shareReplay(1),
-                );
+            const actionHandler = actionMetaHandler(newInstance);
 
-            const reducerHandler = (reducer: MetaReducer) =>
-                getEntityPayload(reducer)
-                    .subscribe(([payload, state]) =>
-                        newInstance.patch(
-                            reducer.reducer.call(newInstance, payload, state)));
+            const handlersMap = {
+                reducers: reducerHandler,
+                effects: effectHandler,
+                actions: actionHandler,
+            };
 
-            const effectHandler = (effect: MetaEffect) =>
-                getEntityPayload(effect)
-                  .subscribe(([payload, state]) =>
-                      effect.effect.call(newInstance, payload, state));
+            type Keys = keyof typeof handlersMap;
 
-            const simplyPatcher = (event: Event, writeAs: string, state: any) =>
-                (event.async ?
-                    event.payload
-                    : of(event.payload))
-                    .subscribe((actionPayload: any) =>
-                        newInstance.patch(
-                            simplyReducer(writeAs)
-                                .call(
-                                    newInstance,
-                                    actionPayload,
-                                    state)));
+            type EventBindings = {
+                [key in Keys]: MetaType[];
+            };
 
-            const actionHandler = (action: MetaAction) =>
-                    getEntityPayload(action)
-                    .subscribe(([payload, state]) => {
-                        const result = action.action.call(newInstance, payload, state) as Event;
-                        dispatcher.dispatch(result);
-                        if (action.options && action.options.writeAs) {
-                            simplyPatcher(result, action.options.writeAs, state);
-                        }
-                    });
+            const entityLists: EventBindings = values(eventScheme)
+                .reduce((acc: EventBindings, event: EventBindings) => {
+                    keys(event)
+                        .map((key: Keys) => {
+                            acc[key] = acc[key].concat(event[key]);
+                        });
+                    return acc;
+                }, {
+                    actions:  [],
+                    reducers: [],
+                    effects:  [],
+                });
 
-            effects.forEach(effectHandler);
-            reducers.forEach(reducerHandler);
-            actions.forEach(actionHandler);
+            keys(entityLists).forEach((entityType: Keys) =>
+                forEach<any>(handlersMap[entityType])(entityLists[entityType]));
+
+            return newInstance;
     }
+/**
+ * Just write entity to Store by name
+ * @param instance - Store instance
+ */
+function simplyMetaPatcher(instance: ProtoStore<any>):
+    (event: Event, writeAs: string, state: any) => Subscription {
+        return (event: Event, writeAs: string, state: any) =>
+            (event.async ?
+                event.payload
+                : of(event.payload))
+                .subscribe((actionPayload: any) =>
+                    instance.patch(
+                        simplyReducer(writeAs)
+                            .call(
+                                instance,
+                                actionPayload,
+                                state,
+                                )));
+}
+
+/**
+ * Get event payload
+ * @param instance - Store instance
+ */
+function metaGetEntityPayload({eventDispatcher, store$}: ProtoStore<any>):
+    (entityType: MetaType) => Observable<any> {
+    return (entity: MetaType) =>
+        eventDispatcher
+            .listen(entity.eventName)
+            .pipe(
+                // tap(x => console.log(x)), // TODO: create Log-plugin to log events. ReduxTools - maybe
+                mergeMap((event: Event) =>
+                    (event.async ?
+                        event.payload
+                        : of(event.payload))
+                            .pipe(take(1))),
+                withLatestFrom(store$.pipe(take(1))),
+                shareReplay(1),
+            );
+}
+
+/**
+ * Handler for reducer
+ * @param instance 
+ */
+function reducerMetaHandler(instance: ProtoStore<any>) {
+    return (reducer: MetaReducer) =>
+        metaGetEntityPayload(instance)(reducer)
+            .subscribe(([payload, state]) =>
+                instance.patch(
+                    reducer.reducer.call(instance, payload, state)));
+}
+
+/**
+ * Handler for Effect
+ * @param instance 
+ */
+function effectMetaHandler(instance: ProtoStore<any>) {
+    return (effect: MetaEffect) =>
+        metaGetEntityPayload(instance)(effect)
+            .subscribe(([payload, state]) =>
+                effect.effect.call(instance, payload, state));
+}
+
+/**
+ * Handler for Action
+ * @param instance 
+ */
+function actionMetaHandler(instance: ProtoStore<any>) {
+    return (action: MetaAction) =>
+        metaGetEntityPayload(instance)(action)
+            .subscribe(([payload, state]) => {
+                const result = action.action.call(instance, payload, state) as Event;
+
+                instance.eventDispatcher.dispatch(result);
+
+                if (action.options && action.options.writeAs) {
+                    simplyMetaPatcher(instance)(result, action.options.writeAs, state);
+                }
+            });
+}
+
+/**
+ * Best way to create Store without classes.
+ * Just set eventything and get new Store
+ * @param initState - init state where you can set type of every entity in Store
+ * @param customDispatcher - custom event dispatcher, if you need connect a few Stores
+ * @param options - extra options for Store
+ * @param eventScheme - scheme of events and its handlers
+ */
+export const createStore = <InitState>(
+    initState?: InitState,
+    customDispatcher?: Dispatcher,
+    options: StoreOptions = DefaultStoreOptions,
+    eventScheme: EventScheme = {},
+    ) => setupStoreEvents(eventScheme)
+        (new ProtoStore<InitState, typeof eventScheme>(initState, options, customDispatcher))

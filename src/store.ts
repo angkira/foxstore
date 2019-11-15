@@ -21,10 +21,14 @@ export function toHashMap<T>(key: string): (list: T[]) => HashMap<T> {
 }
 
 export interface StoreOptions {
-    storeName: string;
+    storeName?: string;
     needHashMap: boolean;
     HashMapKey?: string;
     HashMapFn?: (...args: any[]) => string | number | Symbol; // In the Future
+}
+
+export const DefaultStoreOptions: StoreOptions = {
+    needHashMap: true,
 }
 
 /**
@@ -32,34 +36,34 @@ export interface StoreOptions {
  *
  * @export
  * @class ProtoStore
- * @template T - type | interface for state of Store
+ * @template InitState - type | interface for state of Store
  */
-export class ProtoStore<T> {
+export class ProtoStore<InitState, EventScheme extends Object = {}> {
     /**
      * Subject that contains
      *
-     * @private
-     * @type {(ReplaySubject<T | {}>)}
+     * @type {(ReplaySubject<InitState | {}>)}
      * @memberof ProtoStore
      */
-    private store$: ReplaySubject<T | {}> = new ReplaySubject<T | {}>();
+    readonly store$: ReplaySubject<InitState | {}> = new ReplaySubject<InitState | {}>();
     /**
      * Private event-bus-driver for this Store, to create Event-Namespace
      *
-     * @private
      * @type {Dispatcher}
      * @memberof ProtoStore
      */
-    private eventDispatcher: Dispatcher = new Dispatcher();
+    readonly eventDispatcher: Dispatcher;
 
-    constructor(
-        initState?: T,
+    constructor(    
+        initState?: InitState,
         private options?: StoreOptions,
-        ) {
+        customDispatcher?: Dispatcher,
+        ) {        
         if (initState) {
             this.patch(initState);
         }
-        this.dispatch(new Event('storeInit'));
+        this.eventDispatcher = customDispatcher
+            || new Dispatcher(new Event('storeInit'));
     }
 
     /**
@@ -67,10 +71,10 @@ export class ProtoStore<T> {
      *
      * @template K
      * @param {K} [entityName] key of Entity from Store. If empty - returns all the Store.
-     * @returns {Observable<T[K]>}
+     * @returns {Observable<InitState[K]>}
      * @memberof ProtoStore
      */
-    select<K extends keyof T>(entityName?: K): Observable<T[K] | T | {}> {
+    select<K extends keyof InitState>(entityName?: K): Observable<InitState[K] | InitState | {}> {
         return (entityName ?
             this.store$.pipe(
                 rxMap(path([entityName as string])),
@@ -86,22 +90,22 @@ export class ProtoStore<T> {
      * Hack to get current value of Store as Object
      *
      * @readonly
-     * @type {T}
+     * @type {InitState}
      * @memberof ProtoStore
      */
-    get value(): T {
+    get value(): InitState {
         const events = this.store$['_events'];
-        return last(<T[]>events);
+        return last(<InitState[]>events);
     }
 
     /**
      * Patch current value of store by new.
      *
-     * @param {T} update
+     * @param {InitState} update
      * @returns {this}
      * @memberof ProtoStore
      */
-    patch(update: T): this {
+    patch(update: InitState): this {
         this.store$.next(
                 Object.assign({}, this.value, update,
                     this.options && this.options.needHashMap ?
@@ -128,10 +132,10 @@ export class ProtoStore<T> {
      * @returns {this}
      * @memberof ProtoStore
      */
-    dispatch(event: Event | string): this {
+    dispatch(event: Event | keyof EventScheme): this {
         event instanceof Event ?
             this.eventDispatcher.dispatch(event)
-            : this.eventDispatcher.dispatch(new Event(event));
+            : this.eventDispatcher.dispatch(new Event(event as string));
         return this;
     }
 
@@ -153,7 +157,7 @@ export class ProtoStore<T> {
      *
      * @param mapKey
      */
-    private getHashMap(value: T): HashMap<any> {
+    private getHashMap(value: InitState): HashMap<any> {
         if (!this.options || !this.options.HashMapKey) {
             return {};
         } else {

@@ -1,5 +1,5 @@
-import { Observable } from 'rxjs';
-import { Event } from './dispatcher';
+import { ReplaySubject, Observable } from 'rxjs';
+import { Dispatcher, Event } from './dispatcher';
 export declare type HashMap<T> = {
     [key: string]: T;
 };
@@ -13,62 +13,61 @@ export declare type HashMap<T> = {
  */
 export declare function toHashMap<T>(key: string): (list: T[]) => HashMap<T>;
 export interface StoreOptions {
-    storeName: string;
+    storeName?: string;
     needHashMap: boolean;
     HashMapKey?: string;
     HashMapFn?: (...args: any[]) => string | number | Symbol;
 }
+export declare const DefaultStoreOptions: StoreOptions;
 /**
  * Parent class that contains all basic methods of Store
  *
  * @export
  * @class ProtoStore
- * @template T - type | interface for state of Store
+ * @template InitState - type | interface for state of Store
  */
-export declare class ProtoStore<T> {
+export declare class ProtoStore<InitState, EventScheme extends Object = {}> {
     private options?;
     /**
      * Subject that contains
      *
-     * @private
-     * @type {(ReplaySubject<T | {}>)}
+     * @type {(ReplaySubject<InitState | {}>)}
      * @memberof ProtoStore
      */
-    private store$;
+    readonly store$: ReplaySubject<InitState | {}>;
     /**
      * Private event-bus-driver for this Store, to create Event-Namespace
      *
-     * @private
      * @type {Dispatcher}
      * @memberof ProtoStore
      */
-    private eventDispatcher;
-    constructor(initState?: T, options?: StoreOptions | undefined);
+    readonly eventDispatcher: Dispatcher;
+    constructor(initState?: InitState, options?: StoreOptions | undefined, customDispatcher?: Dispatcher);
     /**
      * Selecting stream with data from Store by key.
      *
      * @template K
      * @param {K} [entityName] key of Entity from Store. If empty - returns all the Store.
-     * @returns {Observable<T[K]>}
+     * @returns {Observable<InitState[K]>}
      * @memberof ProtoStore
      */
-    select<K extends keyof T>(entityName?: K): Observable<T[K] | T | {}>;
+    select<K extends keyof InitState>(entityName?: K): Observable<InitState[K] | InitState | {}>;
     /**
      * Hack to get current value of Store as Object
      *
      * @readonly
-     * @type {T}
+     * @type {InitState}
      * @memberof ProtoStore
      */
-    readonly value: T;
+    readonly value: InitState;
     /**
      * Patch current value of store by new.
      *
-     * @param {T} update
+     * @param {InitState} update
      * @returns {this}
      * @memberof ProtoStore
      */
-    patch(update: T): this;
+    patch(update: InitState): this;
     /**
      * Clears the Store state by empty object.
      *
@@ -82,7 +81,7 @@ export declare class ProtoStore<T> {
      * @returns {this}
      * @memberof ProtoStore
      */
-    dispatch(event: Event | string): this;
+    dispatch(event: Event | keyof EventScheme): this;
     /**
      * This method lets to work with events dynamically
      *

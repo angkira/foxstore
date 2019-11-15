@@ -1,6 +1,6 @@
 {
   "name": "foxstore",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "description": "Reactive Event-Driven Storage for WebApplications based on RxJs (reactive extensions)",
   "main": "lib/index",
   "keywords": [
@@ -26,6 +26,7 @@
   "dependencies": {
     "@types/ramda": "^0.26.21",
     "ramda": "^0.26.1",
-    "rxjs": "^6.5.2"
+    "rxjs": "^6.5.2",
+    "tslint": "^5.20.1"
   }
 }

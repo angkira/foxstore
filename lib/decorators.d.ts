@@ -1,3 +1,4 @@
+import { ProtoStore, StoreOptions } from './store';
 import { Dispatcher, Event } from './dispatcher';
 import 'reflect-metadata';
 export declare type ActionFn = (payload: any, state?: any) => Event;
@@ -44,6 +45,13 @@ export declare class MetaEffect {
     options?: IActionOptions | undefined;
     constructor(eventName: string, effect: EffectFn, options?: IActionOptions | undefined);
 }
+declare type EventScheme = {
+    [eventName: string]: {
+        actions: MetaAction[];
+        reducers: MetaReducer[];
+        effects: MetaEffect[];
+    };
+};
 /**
  * Action MethodDecorator for Store class, works by metadata of constructor.
  *
@@ -79,12 +87,19 @@ export declare function Effect(eventName: string): MethodDecorator;
  * @param {Dispatcher} [customDispatcher]
  * @returns {*}
  */
-export declare function Store(initState?: any, customDispatcher?: Dispatcher): any;
+export declare function Store<InitState extends Object = {}>(initState?: InitState, customDispatcher?: Dispatcher, eventScheme?: EventScheme): any;
 /**
  * Setup handling of Reducers, Actions, SideEffects without Decorator,
  * Use it in Constructor if you use Angular Injectable
- * @param initState
- * @param customDispatcher
  */
-export declare const setupStoreEvents: <State>(initState?: State | undefined, customDispatcher?: Dispatcher | undefined) => (newInstance: any) => void;
+export declare const setupStoreEvents: (eventScheme?: EventScheme) => (newInstance: ProtoStore<any, {}>) => ProtoStore<any, {}>;
+/**
+ * Best way to create Store without classes.
+ * Just set eventything and get new Store
+ * @param initState - init state where you can set type of every entity in Store
+ * @param customDispatcher - custom event dispatcher, if you need connect a few Stores
+ * @param options - extra options for Store
+ * @param eventScheme - scheme of events and its handlers
+ */
+export declare const createStore: <InitState>(initState?: InitState | undefined, customDispatcher?: Dispatcher | undefined, options?: StoreOptions, eventScheme?: EventScheme) => ProtoStore<any, {}>;
 export {};
