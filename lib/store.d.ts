@@ -1,5 +1,5 @@
 import { ReplaySubject, Observable } from 'rxjs';
-import { Dispatcher, Event } from './dispatcher';
+import { Dispatcher } from './dispatcher';
 export declare type HashMap<T> = {
     [key: string]: T;
 };
@@ -81,7 +81,7 @@ export declare class ProtoStore<InitState, EventScheme extends Object = {}> {
      * @returns {this}
      * @memberof ProtoStore
      */
-    dispatch(event: Event | keyof EventScheme): this;
+    dispatch<Payload>(eventName: keyof EventScheme, payload?: Payload): this;
     /**
      * This method lets to work with events dynamically
      *

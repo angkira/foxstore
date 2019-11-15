@@ -132,10 +132,9 @@ export class ProtoStore<InitState, EventScheme extends Object = {}> {
      * @returns {this}
      * @memberof ProtoStore
      */
-    dispatch(event: Event | keyof EventScheme): this {
-        event instanceof Event ?
-            this.eventDispatcher.dispatch(event)
-            : this.eventDispatcher.dispatch(new Event(event as string));
+    dispatch<Payload>(eventName: keyof EventScheme, payload?: Payload): this {
+        this.eventDispatcher.dispatch(
+            new Event(eventName as string, payload));
         return this;
     }
 

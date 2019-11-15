@@ -214,7 +214,7 @@ export const setupStoreEvents = (eventScheme: EventScheme = {}) =>
                 .reduce((acc: EventBindings | any, event: EventBindings | any) => {
                     (keys(event) as Keys[])
                         .map((key: Keys) => {
-                            acc[key] = acc[key].concat(event[key]);
+                            acc[key] = (acc[key] || []).concat(event[key]);
                         });
                     return acc;
                 }, {});
