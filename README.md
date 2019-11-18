@@ -60,6 +60,8 @@ export class MainStore extends ProtoStore<StoreModel> {
 
 ## Functions
 
+You can use FoxStore without classes, but functions. It`s short, easy, readable. Can be useful with React or Vue, or another framework without angular-like service-classes
+
 ```typescript
 import { ProtoStore, createStore, EventScheme } from 'foxstore';
 
@@ -92,4 +94,4 @@ Example you can see here https://github.com/angkira/foxstore-example
 I`m so sorry, guys, but using @Store decorator now is conflicting with Angular Singleton Service using. So, you should use SetupStoreEvents()(this) in constructor of your StoreClass .instead Decorator @Store
 
 
-tags: foxstore rxjs redux flux storage state reactive ngrx rx 
+tags: foxstore rxjs redux flux storage state reactive react state-management ngrx rx 
