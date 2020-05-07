@@ -25,5 +25,5 @@ export declare class Dispatcher {
     dispatch(event: Event): void;
     listen(eventName: string): Observable<Event>;
     emitDestroy(): void;
-    readonly destroy$: Observable<Event>;
+    get destroy$(): Observable<Event>;
 }

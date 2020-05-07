@@ -1,9 +1,9 @@
-import { ProtoStore, StoreOptions, HashMap } from './store';
+import { ProtoStore, StoreOptions } from './store';
 import { Dispatcher, Event } from './dispatcher';
 import 'reflect-metadata';
-export declare type ActionFn = (payload: any, state?: any) => Event;
-export declare type ReducerFn = (payload: any, state?: any) => typeof state;
-export declare type EffectFn = (payload: any, state?: any) => void;
+export declare type ActionFn<Payload = any> = (payload: Payload, state?: any) => Event;
+export declare type ReducerFn<Payload = any> = (payload: Payload, state?: any) => typeof state;
+export declare type EffectFn<Payload = any> = (payload: Payload, state?: any) => void;
 /**
  * Options for StoreAction for optimized handling
  *
@@ -46,13 +46,14 @@ export declare class MetaEffect {
     constructor(eventName: string, effect: EffectFn, options?: IActionOptions | undefined);
 }
 export declare type MetaType = MetaAction | MetaReducer | MetaEffect;
-export declare type EventScheme = {
-    [eventName: string]: {
-        actions?: MetaAction[];
-        reducers?: MetaReducer[];
-        effects?: MetaEffect[];
-    };
-} & Object;
+export declare type EventConfig = {
+    actions?: MetaAction[];
+    reducers?: MetaReducer[];
+    effects?: MetaEffect[];
+};
+export declare type EventSchemeType = {
+    [eventName: string]: EventConfig;
+};
 /**
  * Action MethodDecorator for Store class, works by metadata of constructor.
  *
@@ -88,12 +89,12 @@ export declare function Effect(eventName: string): MethodDecorator;
  * @param {Dispatcher} [customDispatcher]
  * @returns {*}
  */
-export declare function Store<InitState extends Object = {}>(initState?: InitState, customDispatcher?: Dispatcher, eventScheme?: EventScheme): any;
+export declare function Store<InitState extends Object = {}>(initState?: InitState, customDispatcher?: Dispatcher, eventScheme?: EventSchemeType): any;
 /**
  * Setup handling of Reducers, Actions, SideEffects without Decorator,
  * Use it in Constructor if you use Angular Injectable
  */
-export declare const setupStoreEvents: <State, Scheme>(eventScheme?: EventScheme) => (newInstance: ProtoStore<State, Scheme>) => ProtoStore<State, Scheme>;
+export declare const setupStoreEvents: <State, Scheme>(eventScheme?: EventSchemeType) => (newInstance: ProtoStore<State, Scheme>) => ProtoStore<State, Scheme>;
 /**
  * Best way to create Store without classes.
  * Just set eventything and get new Store
@@ -101,6 +102,12 @@ export declare const setupStoreEvents: <State, Scheme>(eventScheme?: EventScheme
  * @param customDispatcher - custom event dispatcher, if you need connect a few Stores
  * @param options - extra options for Store
  * @param eventScheme - scheme of events and its handlers
+ *
  */
-export declare const createStore: <InitState, SchemeType extends EventScheme = HashMap<any>>(initState?: InitState | undefined, customDispatcher?: Dispatcher | null | undefined, options?: StoreOptions | null | undefined, eventScheme?: Object | SchemeType | undefined) => ProtoStore<InitState, SchemeType>;
+export declare const createStore: <InitState, SchemeType extends EventSchemeType>(initState?: InitState | undefined, customDispatcher?: Dispatcher | null | undefined, options?: StoreOptions | null | undefined, eventScheme?: Object | SchemeType | undefined) => ProtoStore<InitState, SchemeType>;
+/**
+ * Function to fix type-checking of SchemeEvents
+ * @param scheme Scheme Object
+ */
+export declare const schemeGen: <Scheme extends EventSchemeType>(scheme: Scheme) => Scheme;
 export {};

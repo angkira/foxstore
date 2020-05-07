@@ -59,7 +59,7 @@ export declare class ProtoStore<InitState, EventScheme = HashMap<any>> {
      * @type {InitState}
      * @memberof ProtoStore
      */
-    readonly value: InitState;
+    get snapshot(): InitState | void;
     /**
      * Patch current value of store by new.
      *
@@ -79,7 +79,7 @@ export declare class ProtoStore<InitState, EventScheme = HashMap<any>> {
      * @param eventName
      * @param payload
      */
-    dispatch<Payload>(eventName: keyof EventScheme, payload?: Payload): this;
+    dispatch<Payload = void>(eventName: keyof EventScheme, payload?: Payload): this;
     /**
      * This method lets to work with events dynamically
      *
