@@ -10,12 +10,12 @@ const REDUCER_METAKEY = '@StoreReducers';
 const ACTION_METAKEY = '@StoreActions';
 const EFFECT_METAKEY = '@StoreEffects';
 
-export type ActionFn  = (payload: any, state?: any) => Event;
-export type ReducerFn = (payload: any, state?: any) => typeof state;
-export type EffectFn  = (payload: any, state?: any) => void;
+export type ActionFn<Payload = any>  = (payload: Payload, state?: any) => Event;
+export type ReducerFn<Payload = any> = (payload: Payload, state?: any) => typeof state;
+export type EffectFn<Payload = any>  = (payload: Payload, state?: any) => void;
 
 const simplyReducer: ReducerFn = (fieldName: string) =>
-    (payload: any, state: any) =>
+    (payload: any) =>
         ({ [fieldName] : payload });
 
 /**
@@ -68,11 +68,13 @@ export class MetaEffect {
 
 export type MetaType = MetaAction | MetaReducer | MetaEffect;
 
-export type EventScheme = { [eventName: string]: {
+export type EventConfig = {
     actions?: MetaAction[],
     reducers?: MetaReducer[],
     effects?: MetaEffect[],
-} } & Object;
+};
+
+export type EventSchemeType = { [eventName: string]: EventConfig };
 
 /**
  * Action MethodDecorator for Store class, works by metadata of constructor.
@@ -139,7 +141,7 @@ export function Effect(eventName: string): MethodDecorator {
 export function Store<InitState extends Object = {}>(
     initState?: InitState,
     customDispatcher?: Dispatcher,
-    eventScheme: EventScheme = {},
+    eventScheme: EventSchemeType = {},
     ): any {
     return function (target: any = Object): (args: any[]) => ProtoStore<typeof initState> {
         // save a reference to the original constructor
@@ -162,10 +164,10 @@ export function Store<InitState extends Object = {}>(
             const actions: MetaAction[] = Reflect.getMetadata(ACTION_METAKEY, constructor)
                 || [];
 
-            const metadataEventScheme: EventScheme = {} || eventScheme;
+            const metadataEventScheme: EventSchemeType = {} || eventScheme;
 
             const entityReducer = (entityName: 'actions' | 'effects' | 'reducers') =>
-                (scheme: EventScheme, entity: MetaType) => {
+                (scheme: EventSchemeType, entity: MetaType) => {
                     scheme[entity.eventName] = scheme[entity.eventName] 
                                                 || { [entityName]: [] };
                     (scheme[entity.eventName][entityName] as (typeof entity)[]).push(entity);
@@ -190,13 +192,13 @@ export function Store<InitState extends Object = {}>(
  * Setup handling of Reducers, Actions, SideEffects without Decorator,
  * Use it in Constructor if you use Angular Injectable
  */
-export const setupStoreEvents = <State, Scheme>(eventScheme: EventScheme = {}) =>
+export const setupStoreEvents = <State, Scheme>(eventScheme: EventSchemeType = {}) =>
     (newInstance: ProtoStore<State, Scheme>) => {
             const reducerHandler = reducerMetaHandler(newInstance);
 
-            const effectHandler = effectMetaHandler(newInstance);
+            const effectHandler  = effectMetaHandler(newInstance);
 
-            const actionHandler = actionMetaHandler(newInstance);
+            const actionHandler  = actionMetaHandler(newInstance);
 
             const handlersMap = {
                 reducers: reducerHandler,
@@ -204,7 +206,7 @@ export const setupStoreEvents = <State, Scheme>(eventScheme: EventScheme = {}) =
                 actions: actionHandler,
             };
 
-            type Keys = keyof EventScheme[string];
+            type Keys = keyof EventSchemeType[string];
 
             type EventBindings = {
                 [key in Keys]: MetaType[];
@@ -313,12 +315,19 @@ function actionMetaHandler(instance: ProtoStore<any>) {
  * @param customDispatcher - custom event dispatcher, if you need connect a few Stores
  * @param options - extra options for Store
  * @param eventScheme - scheme of events and its handlers
+ * 
  */
 export const createStore = <InitState,
-    SchemeType extends EventScheme = HashMap<any>>(
+    SchemeType extends EventSchemeType>(
         initState?: InitState,
         customDispatcher?: Dispatcher | null,
         options?: StoreOptions | null,
         eventScheme?: SchemeType | Object,
-    ) => setupStoreEvents<InitState, SchemeType>(eventScheme as EventScheme)
+    ) => setupStoreEvents<InitState, SchemeType>(eventScheme as EventSchemeType)
         (new ProtoStore<InitState, SchemeType>(initState, options, customDispatcher))
+
+/**
+ * Function to fix type-checking of SchemeEvents
+ * @param scheme Scheme Object
+ */
+export const schemeGen = <Scheme extends EventSchemeType>(scheme: Scheme) => scheme;

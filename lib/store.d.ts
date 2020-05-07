@@ -79,7 +79,7 @@ export declare class ProtoStore<InitState, EventScheme = HashMap<any>> {
      * @param eventName
      * @param payload
      */
-    dispatch<Payload>(eventName: keyof EventScheme & string, payload?: Payload): this;
+    dispatch<Payload>(eventName: keyof EventScheme, payload?: Payload): this;
     /**
      * This method lets to work with events dynamically
      *

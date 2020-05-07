@@ -63,7 +63,7 @@ export class MainStore extends ProtoStore<StoreModel> {
 You can use FoxStore without classes, but functions. It`s short, easy, readable. Can be useful with React or Vue, or another framework without angular-like service-classes
 
 ```typescript
-import { ProtoStore, createStore, EventScheme } from 'foxstore';
+import { ProtoStore, createStore, EventScheme, schemeGen } from 'foxstore';
 
 const initState = {
   rows: 10,
@@ -72,11 +72,11 @@ const initState = {
 };
 
 
-const eventSheme = { // Important not to set type! Actual for 2.0.7 
+const eventSheme = schemeGen({ // Important not to set type! Actual for 2.0.7 
   storeInited: {
     effects: [{eventName: 'storeInited', effect: console.log}]
   }
-}
+});
 
 store = createStore<typeof initState, typeof eventSheme>(initState, null, null, eventSheme);
 

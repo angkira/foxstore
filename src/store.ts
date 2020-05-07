@@ -59,11 +59,9 @@ export class ProtoStore<InitState, EventScheme = HashMap<any>> {
         private options: StoreOptions | null = DefaultStoreOptions,
         customDispatcher?: Dispatcher | null,
         ) {        
-        if (initState) {
-            this.patch(initState);
-        }
-        this.eventDispatcher = customDispatcher
-            || new Dispatcher(new Event('storeInit'));
+            initState && this.patch(initState);
+            this.eventDispatcher = customDispatcher
+                || new Dispatcher(new Event('storeInit'));
     }
 
     /**
@@ -93,9 +91,9 @@ export class ProtoStore<InitState, EventScheme = HashMap<any>> {
      * @type {InitState}
      * @memberof ProtoStore
      */
-    get value(): InitState {
+    get snapshot(): InitState | void {
         const events = this.store$['_events'];
-        return last(<InitState[]>events);
+        return last<InitState>(events);
     }
 
     /**
@@ -107,8 +105,8 @@ export class ProtoStore<InitState, EventScheme = HashMap<any>> {
      */
     patch(update: InitState): this {
         this.store$.next(
-                Object.assign({}, this.value, update,
-                    this.options && this.options.needHashMap ?
+                Object.assign({}, this.snapshot, update,
+                    this.options?.needHashMap ?
                         this.getHashMap(update) : {}));
         // console.log('store patched by ', update); Turn on to watch Store changes
 
@@ -130,7 +128,7 @@ export class ProtoStore<InitState, EventScheme = HashMap<any>> {
      * @param eventName 
      * @param payload 
      */
-    dispatch<Payload>(eventName: keyof EventScheme & string, payload?: Payload): this {
+    dispatch<Payload = void>(eventName: keyof EventScheme, payload?: Payload): this {
         this.eventDispatcher.dispatch(
             new Event(eventName as string, payload));
         return this;
@@ -160,11 +158,12 @@ export class ProtoStore<InitState, EventScheme = HashMap<any>> {
         } else {
             return  Object.keys(value)
                     //@ts-ignore
-                .filter((key: string) => Array.isArray(this.value[key]))
+                .filter((key: string) => Array.isArray(this.snapshot[key]))
                 .map((entityKey: string) => ({
                         name: entityKey,
                         //@ts-ignore
-                        value: toHashMap(this.options.HashMapKey)(this.value[entityKey])}))
+                        value: toHashMap(this.options.HashMapKey)(this.snapshot[entityKey]),
+                    }))
                 .reduce((mapObject: HashMap<any>, entity: {name: string, value: HashMap<any>}) => {
                     return mapObject[`${entity.name}_Map`] = entity.value;
                 }, {});
