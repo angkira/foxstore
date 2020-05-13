@@ -1,5 +1,6 @@
 import { ReplaySubject, Observable } from 'rxjs';
 import { Dispatcher } from './dispatcher';
+import { EventSchemeType } from './decorators';
 export declare type HashMap<T> = {
     [key: string]: T;
 };
@@ -42,7 +43,7 @@ export declare class ProtoStore<InitState, EventScheme = HashMap<any>> {
      * @memberof ProtoStore
      */
     readonly eventDispatcher: Dispatcher;
-    constructor(initState?: InitState, options?: StoreOptions | null, customDispatcher?: Dispatcher | null);
+    constructor(initState?: InitState, options?: StoreOptions | null, customDispatcher?: Dispatcher | null, eventScheme?: EventSchemeType);
     /**
      * Selecting stream with data from Store by key.
      *
@@ -51,7 +52,7 @@ export declare class ProtoStore<InitState, EventScheme = HashMap<any>> {
      * @returns {Observable<InitState[K]>}
      * @memberof ProtoStore
      */
-    select<K extends keyof InitState>(entityName?: K): Observable<InitState[K] | InitState | {}>;
+    select<K extends keyof InitState>(entityName: K | void): K extends void ? Observable<InitState> : Observable<InitState[K]>;
     /**
      * Hack to get current value of Store as Object
      *
@@ -90,7 +91,6 @@ export declare class ProtoStore<InitState, EventScheme = HashMap<any>> {
     /**
      * For every list-entity in state returnes HashMap for easier using
      *
-     * @param mapKey
      */
     private getHashMap;
     /**

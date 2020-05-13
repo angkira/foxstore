@@ -316,6 +316,7 @@ function actionMetaHandler(instance: ProtoStore<any>) {
  * @param options - extra options for Store
  * @param eventScheme - scheme of events and its handlers
  * 
+ * @deprecated - Now you can give EventScheme to Store conctructor
  */
 export const createStore = <InitState,
     SchemeType extends EventSchemeType>(

@@ -103,6 +103,7 @@ export declare const setupStoreEvents: <State, Scheme>(eventScheme?: EventScheme
  * @param options - extra options for Store
  * @param eventScheme - scheme of events and its handlers
  *
+ * @deprecated - Now you can give EventScheme to Store conctructor
  */
 export declare const createStore: <InitState, SchemeType extends EventSchemeType>(initState?: InitState | undefined, customDispatcher?: Dispatcher | null | undefined, options?: StoreOptions | null | undefined, eventScheme?: Object | SchemeType | undefined) => ProtoStore<InitState, SchemeType>;
 /**
