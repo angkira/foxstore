@@ -274,7 +274,7 @@ function metaGetEntityPayload({eventDispatcher, store$}: ProtoStore<any>):
 function reducerMetaHandler(instance: ProtoStore<any>) {
     return (reducer: MetaReducer) =>
         metaGetEntityPayload(instance)(reducer)
-            .subscribe(([payload, state]) =>
+            .subscribe(([payload, state]: any[]) =>
                 instance.patch(
                     reducer.reducer.call(instance, payload, state)));
 }
@@ -286,7 +286,7 @@ function reducerMetaHandler(instance: ProtoStore<any>) {
 function effectMetaHandler(instance: ProtoStore<any>) {
     return (effect: MetaEffect) =>
         metaGetEntityPayload(instance)(effect)
-            .subscribe(([payload, state]) =>
+            .subscribe(([payload, state]: any[]) =>
                 effect.effect.call(instance, payload, state));
 }
 
@@ -297,7 +297,7 @@ function effectMetaHandler(instance: ProtoStore<any>) {
 function actionMetaHandler(instance: ProtoStore<any>) {
     return (action: MetaAction) =>
         metaGetEntityPayload(instance)(action)
-            .subscribe(([payload, state]) => {
+            .subscribe(([payload, state]: any[]) => {
                 const result = action.action.call(instance, payload, state) as Event;
 
                 instance.eventDispatcher.dispatch(result);

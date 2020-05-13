@@ -2,6 +2,7 @@ import { ReplaySubject, Observable } from 'rxjs';
 import { map as rxMap, takeUntil, shareReplay} from 'rxjs/operators';
 import { last, path } from 'ramda';
 import { Dispatcher, Event } from './dispatcher';
+import { EventSchemeType, setupStoreEvents } from './decorators';
 
 export type HashMap<T> = {[key: string]: T}
 /**
@@ -58,10 +59,14 @@ export class ProtoStore<InitState, EventScheme = HashMap<any>> {
         initState?: InitState,
         private options: StoreOptions | null = DefaultStoreOptions,
         customDispatcher?: Dispatcher | null,
+        eventScheme?: EventSchemeType, 
         ) {        
             initState && this.patch(initState);
+
             this.eventDispatcher = customDispatcher
                 || new Dispatcher(new Event('storeInit'));
+
+            eventScheme && setupStoreEvents<InitState, EventScheme>(eventScheme)(this);
     }
 
     /**
@@ -72,7 +77,8 @@ export class ProtoStore<InitState, EventScheme = HashMap<any>> {
      * @returns {Observable<InitState[K]>}
      * @memberof ProtoStore
      */
-    select<K extends keyof InitState>(entityName?: K): Observable<InitState[K] | InitState | {}> {
+    select<K extends keyof InitState>(entityName: K | void):
+        K extends void ? Observable<InitState> : Observable<InitState[K]> {
         return (entityName ?
             this.store$.pipe(
                 rxMap(path([entityName as string])),
@@ -150,7 +156,6 @@ export class ProtoStore<InitState, EventScheme = HashMap<any>> {
     /**
      * For every list-entity in state returnes HashMap for easier using
      *
-     * @param mapKey
      */
     private getHashMap(value: InitState): HashMap<any> {
         if (!this.options || !this.options.HashMapKey) {
