@@ -1,4 +1,4 @@
-import { ProtoStore, StoreOptions } from './store';
+import { ProtoStore, StoreOptions, HashMap } from './store';
 import { Dispatcher, Event } from './dispatcher';
 import 'reflect-metadata';
 export declare type ActionFn<Payload = any> = (payload: Payload, state?: any) => Event;
@@ -90,6 +90,12 @@ export declare function Effect(eventName: string): MethodDecorator;
  * @returns {*}
  */
 export declare function Store<InitState extends Object = {}>(initState?: InitState, customDispatcher?: Dispatcher, eventScheme?: EventSchemeType): any;
+/**
+ * Gets Actions, Reducers and Effects from metadata and create EventScheme
+ * @param store
+ * @param eventScheme
+ */
+export declare const setupStoreEventsFromDecorators: <InitState>(store: ProtoStore<InitState, HashMap<any>>, eventScheme?: EventSchemeType) => void;
 /**
  * Setup handling of Reducers, Actions, SideEffects without Decorator,
  * Use it in Constructor if you use Angular Injectable

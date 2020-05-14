@@ -2,7 +2,7 @@ import { ReplaySubject, Observable } from 'rxjs';
 import { map as rxMap, takeUntil, shareReplay} from 'rxjs/operators';
 import { last, path } from 'ramda';
 import { Dispatcher, Event } from './dispatcher';
-import { EventSchemeType, setupStoreEvents } from './decorators';
+import { EventSchemeType, setupStoreEvents, setupStoreEventsFromDecorators } from './decorators';
 
 export type HashMap<T> = {[key: string]: T}
 /**
@@ -55,18 +55,19 @@ export class ProtoStore<InitState, EventScheme = HashMap<any>> {
      */
     readonly eventDispatcher: Dispatcher;
 
-    constructor(    
+    constructor(
         initState?: InitState,
         private options: StoreOptions | null = DefaultStoreOptions,
         customDispatcher?: Dispatcher | null,
-        eventScheme?: EventSchemeType, 
-        ) {        
+        eventScheme?: EventSchemeType,
+        ) {
             initState && this.patch(initState);
 
             this.eventDispatcher = customDispatcher
                 || new Dispatcher(new Event('storeInit'));
 
             eventScheme && setupStoreEvents<InitState, EventScheme>(eventScheme)(this);
+            setupStoreEventsFromDecorators(this);
     }
 
     /**
@@ -79,9 +80,10 @@ export class ProtoStore<InitState, EventScheme = HashMap<any>> {
      */
     select<K extends keyof InitState>(entityName: K | void):
         K extends void ? Observable<InitState> : Observable<InitState[K]> {
+          //@ts-ignore
         return (entityName ?
             this.store$.pipe(
-                rxMap(path([entityName as string])),
+                rxMap(path<InitState[K]>([entityName as string])),
             ) : this.store$.asObservable())
             .pipe(
                 // @ts-ignore
@@ -131,8 +133,8 @@ export class ProtoStore<InitState, EventScheme = HashMap<any>> {
 
     /**
      * Ethernal method to dispatch Store Event
-     * @param eventName 
-     * @param payload 
+     * @param eventName
+     * @param payload
      */
     dispatch<Payload = void>(eventName: keyof EventScheme, payload?: Payload): this {
         this.eventDispatcher.dispatch(
