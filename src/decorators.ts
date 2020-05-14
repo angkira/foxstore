@@ -180,6 +180,14 @@ export function Store<InitState extends Object = {}>(
 
             setupStoreEvents(metadataEventScheme)(newInstance);
 
+            // Copy metadata from decorated class to new instance
+            Reflect.getMetadataKeys(constructor)
+                .forEach((key: string) => Reflect.defineMetadata(
+                    key,
+                    Reflect.getMetadata(key, constructor),
+                    newInstance,
+                    ));
+
             return newInstance;
         };
 
