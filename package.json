@@ -1,6 +1,6 @@
 {
   "name": "foxstore",
-  "version": "2.2.2",
+  "version": "2.2.3",
   "description": "Reactive Event-Driven Storage for WebApplications based on RxJs (reactive extensions)",
   "main": "lib/index",
   "keywords": [

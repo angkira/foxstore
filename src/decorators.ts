@@ -182,11 +182,11 @@ export function Store<InitState extends Object = {}>(
  * @param eventScheme
  */
 export const setupStoreEventsFromDecorators = <InitState>(store: ProtoStore<InitState>, eventScheme: EventSchemeType = {}) => {
-  const effects: MetaEffect[] = Reflect.getMetadata(EFFECT_METAKEY, store)
+  const effects: MetaEffect[] = Reflect.getMetadata(EFFECT_METAKEY, store.constructor)
                 || [];
-  const reducers: MetaReducer[] = Reflect.getMetadata(REDUCER_METAKEY, store)
+  const reducers: MetaReducer[] = Reflect.getMetadata(REDUCER_METAKEY, store.constructor)
       || [];
-  const actions: MetaAction[] = Reflect.getMetadata(ACTION_METAKEY, store)
+  const actions: MetaAction[] = Reflect.getMetadata(ACTION_METAKEY, store.constructor)
       || [];
 
   const metadataEventScheme: EventSchemeType = eventScheme;
