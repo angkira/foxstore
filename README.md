@@ -11,14 +11,58 @@ Simply analog of NgRx, if you wanna Reactive State Management, but do not want t
 ```
 
 # Usage
+
+## Terminology
+
+Action - function that may handle payload from some Event and returns another Event with some payload or not. Payload may be stream, so you should set async-param to True to handle it as stream.
+
+Example:
+```typescript
+
+   //As method
+   
+   @Action('loadDocs', {writeAs: 'documents'})
+   loadDocs(): Event {
+      return new Event('docsLoaded', this.docService.load(), true)
+      }
+      
+   // As function for EventScheme
+   
+   const loadDocs = new MetaAction('loadDocs', () => new Event('docsLoaded', this.docService.load(), true));
+```
+
+Reducer - function that syncronously changing Store state.
+
+Example:
+```typescript
+   
+   @Reducer('docsLoaded')
+   separateDocs(docs: Doc[], state: State): State {
+      return {
+         ...state,
+         activeDocs: docs.filter(isActive),
+         inactiveDocs: docs.filter(not(isActive)),
+         }
+   }
+```
+
+Effect - just some side-effect, result of function wouldn`t be handled
+
+Example:
+
+```typescript
+   
+   @Effect('docsLoaded')
+   logDocs(docs: Doc[]): void {
+      console.log(`Docs loaded - ${docs.length} items`);
+   }
+
 ## For classes
 
 Use decorators for creating your own store!
 
 Describe Actions, Reducers and Effects by selecting event-names.
 
-Be careful! Store-decorator now works only with Services.
-In Components you can use it only as class-parent. So, in components it isn`t nessesary cause you have own methods :)
 
 ```typescript
 
@@ -27,7 +71,9 @@ interface StoreModel {
    documents: Doc,
 };
 
-@Store()
+// @Store() - be careful!
+// Store-decorator now not works if you have some DI in Angular-Service
+// or use {provideId: 'root'}, you should just extend ProtoStore class and it will handle decorators
 @Injectable()
 export class MainStore extends ProtoStore<StoreModel> {
 
@@ -46,7 +92,7 @@ export class MainStore extends ProtoStore<StoreModel> {
      const docs$ = this.docService.getDocuments();
 
      // Returnes event cause it is one event-flow
-     return new StoreEvent(
+     return new Event(
       'documentTemplatesLoaded',
       docs$, // returnes stream as payload in Event
       true); // flag 'isAsync' for event with stream-data
@@ -72,7 +118,7 @@ const initState = {
 };
 
 
-const eventSheme = schemeGen({ // Important not to set type! Actual for 2.0.7 
+const eventSheme = schemeGen({ // Important not to set type! Actual for 2.*
   storeInited: {
     effects: [{eventName: 'storeInited', effect: console.log}]
   }
@@ -82,6 +128,37 @@ store = createStore<typeof initState, typeof eventSheme>(initState, null, null, 
 
 store.dispatch('storeInited');
 ```
+## Mix ways!
+
+You can pass your EventScheme to ProtoStore constructor and have EventScheme and decorated methods
+Example:
+
+```typescript
+   import { Action, Event, schemeGen, ProtoStore } from 'foxstore';
+   
+   interface InitState {
+      docs: Doc[],
+   }
+   
+   const initState: InitState = { docs: [], };
+   
+   const EventScheme = schemeGen({
+      storeInited: { effects: [{eventName: 'storeInited', effect: console.log}],
+      loadDocs: {}, // Pass EventScheme to generic to have autocompleting in .dispatch method
+      // Events that decorated can be empty, just to be in keysof EventScheme
+   });
+   
+   export class MeinStore extends ProtoStore<InitState, typeof EventScheme> {
+      constructor(private docService: DocumentService) {
+         super(initState, null, null, EventScheme);
+      }
+      
+      @Action('loadDocs', {writeAs: 'documents'})
+      loadDocs(): Event {
+         return new Event('docsLoaded', this.docService.load(), true)
+      }
+   }
+```
 
 Flux-likely solution that contains simply types and methods to create Event-Driven Asynchronous Storage.
 
@@ -90,8 +167,6 @@ Was tested with Angular-applications.
 *** 
 Also, you can create Reactive Stateful Component by extending Store class. Then you will get component-store with own select(), patch() etc. It is useful if you have Component with a lot of dynamic data.
 Example you can see here https://github.com/angkira/foxstore-example
-
-I`m so sorry, guys, but using @Store decorator now is conflicting with Angular Singleton Service using. So, you should use SetupStoreEvents()(this) in constructor of your StoreClass .instead Decorator @Store
 
 
 tags: foxstore rxjs redux flux storage state reactive react state-management ngrx rx 
