@@ -1,6 +1,7 @@
 import { ReplaySubject, Observable } from 'rxjs';
 import { Dispatcher } from './dispatcher';
-import { EventSchemeType } from './decorators';
+import { EventSchemeType } from "./types";
+import 'reflect-metadata';
 export declare type HashMap<T> = {
     [key: string]: T;
 };

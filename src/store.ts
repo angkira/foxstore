@@ -2,7 +2,9 @@ import { ReplaySubject, Observable } from 'rxjs';
 import { map as rxMap, takeUntil, shareReplay} from 'rxjs/operators';
 import { last, path } from 'ramda';
 import { Dispatcher, Event } from './dispatcher';
-import { EventSchemeType, setupStoreEvents, setupStoreEventsFromDecorators } from './decorators';
+import { setupStoreEvents, setupStoreEventsFromDecorators } from './decorators';
+import { EventSchemeType, STORE_DECORATED_METAKEY } from "./types";
+import 'reflect-metadata';
 
 export type HashMap<T> = {[key: string]: T}
 /**
@@ -66,8 +68,10 @@ export class ProtoStore<InitState, EventScheme = HashMap<any>> {
             this.eventDispatcher = customDispatcher
                 || new Dispatcher(new Event('storeInit'));
 
-            eventScheme && setupStoreEvents<InitState, EventScheme>(eventScheme)(this);
-            setupStoreEventsFromDecorators(this);
+            eventScheme &&
+                setupStoreEvents<InitState, EventScheme>(eventScheme)(this);
+            !Reflect.getMetadata(STORE_DECORATED_METAKEY, this) &&
+                setupStoreEventsFromDecorators(this);
     }
 
     /**
