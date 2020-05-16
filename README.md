@@ -56,7 +56,7 @@ Example:
    logDocs(docs: Doc[]): void {
       console.log(`Docs loaded - ${docs.length} items`);
    }
-
+```
 ## For classes
 
 Use decorators for creating your own store!
