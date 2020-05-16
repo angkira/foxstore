@@ -70,7 +70,8 @@ export class ProtoStore<InitState, EventScheme = HashMap<any>> {
 
             eventScheme &&
                 setupStoreEvents<InitState, EventScheme>(eventScheme)(this);
-            !Reflect.getMetadata(STORE_DECORATED_METAKEY, this) &&
+
+            !Reflect.getMetadata(STORE_DECORATED_METAKEY, this.constructor) &&
                 setupStoreEventsFromDecorators(this);
     }
 

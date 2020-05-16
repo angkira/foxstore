@@ -82,21 +82,20 @@ export function Store<InitState extends Object = {}>(
             // const newInstance = new ProtoStore<typeof initState>(initState);
             // newInstance['__proto__'] = original.prototype;
 
-            const newInstance = new target(...args);
+            Reflect.defineMetadata(STORE_DECORATED_METAKEY, true, target);
 
-            const constructor = newInstance['__proto__'].constructor;
+            const newInstance = new target(...args);
 
             newInstance.eventDispatcher = customDispatcher || newInstance.eventDispatcher;
 
             setupStoreEventsFromDecorators<InitState>(newInstance, eventScheme);
 
-            Reflect.defineMetadata(STORE_DECORATED_METAKEY, true, newInstance);
 
             // Copy metadata from decorated class to new instance
-            Reflect.getMetadataKeys(constructor)
+            Reflect.getMetadataKeys(target)
                 .forEach((key: string) => Reflect.defineMetadata(
                     key,
-                    Reflect.getMetadata(key, constructor),
+                    Reflect.getMetadata(key, target),
                     newInstance,
                     ));
 
