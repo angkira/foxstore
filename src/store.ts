@@ -1,4 +1,4 @@
-import { ReplaySubject, Observable } from 'rxjs';
+import { ReplaySubject, Observable, BehaviorSubject, Subject } from 'rxjs';
 import { map as rxMap, takeUntil, shareReplay} from 'rxjs/operators';
 import { last, path } from 'ramda';
 import { Dispatcher, Event } from './dispatcher';
@@ -48,7 +48,7 @@ export class ProtoStore<InitState, EventScheme = HashMap<any>> {
      * @type {(ReplaySubject<InitState | {}>)}
      * @memberof ProtoStore
      */
-    readonly store$: ReplaySubject<InitState | {}> = new ReplaySubject<InitState | {}>();
+    readonly store$: Subject<InitState | {}> = new BehaviorSubject<InitState | {}>({});
     /**
      * Private event-bus-driver for this Store, to create Event-Namespace
      *
@@ -105,8 +105,8 @@ export class ProtoStore<InitState, EventScheme = HashMap<any>> {
      * @memberof ProtoStore
      */
     get snapshot(): InitState | void {
-        const events = this.store$['_events'];
-        return last<InitState>(events);
+        const events = path<InitState[]>(['_events'], this.store$) as InitState[];
+        return events ? last<InitState>(events) : void 0;
     }
 
     /**
