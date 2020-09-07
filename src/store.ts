@@ -48,7 +48,7 @@ export class ProtoStore<InitState, EventScheme = HashMap<any>> {
      * @type {(ReplaySubject<InitState | {}>)}
      * @memberof ProtoStore
      */
-    readonly store$: Subject<InitState | {}> = new BehaviorSubject<InitState | {}>({});
+    readonly store$: BehaviorSubject<InitState | {}> = new BehaviorSubject<InitState | {}>({});
     /**
      * Private event-bus-driver for this Store, to create Event-Namespace
      *
@@ -105,8 +105,7 @@ export class ProtoStore<InitState, EventScheme = HashMap<any>> {
      * @memberof ProtoStore
      */
     get snapshot(): InitState | void {
-        const events = path<InitState[]>(['_events'], this.store$) as InitState[];
-        return events ? last<InitState>(events) : void 0;
+        return this.store$.getValue();
     }
 
     /**
