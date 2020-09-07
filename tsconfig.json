@@ -1,6 +1,6 @@
 {
     "compilerOptions": {
-      "target": "es6",
+      "target": "es2015",
       "module": "commonjs",
       "experimentalDecorators": true,
       "emitDecoratorMetadata": true,
@@ -8,9 +8,6 @@
       "outDir": "./lib",
       "strict": true
     },
-    "files": [
-      "Reflect.d.ts"
-    ],
     "include": ["src"],
     "exclude": ["node_modules", "**/__tests__/*"]
   }

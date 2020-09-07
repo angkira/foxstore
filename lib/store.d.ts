@@ -1,4 +1,4 @@
-import { Observable, Subject } from 'rxjs';
+import { Observable, BehaviorSubject } from 'rxjs';
 import { Dispatcher } from './dispatcher';
 import { EventSchemeType } from "./types";
 import 'reflect-metadata';
@@ -36,7 +36,7 @@ export declare class ProtoStore<InitState, EventScheme = HashMap<any>> {
      * @type {(ReplaySubject<InitState | {}>)}
      * @memberof ProtoStore
      */
-    readonly store$: Subject<InitState | {}>;
+    readonly store$: BehaviorSubject<InitState | {}>;
     /**
      * Private event-bus-driver for this Store, to create Event-Namespace
      *
@@ -61,7 +61,7 @@ export declare class ProtoStore<InitState, EventScheme = HashMap<any>> {
      * @type {InitState}
      * @memberof ProtoStore
      */
-    get snapshot(): InitState | void;
+    get snapshot(): InitState | {};
     /**
      * Patch current value of store by new.
      *

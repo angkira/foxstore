@@ -104,7 +104,7 @@ export class ProtoStore<InitState, EventScheme = HashMap<any>> {
      * @type {InitState}
      * @memberof ProtoStore
      */
-    get snapshot(): InitState | void {
+    get snapshot(): InitState | {} {
         return this.store$.getValue();
     }
 
