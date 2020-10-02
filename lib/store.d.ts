@@ -53,7 +53,7 @@ export declare class ProtoStore<InitState, EventScheme = HashMap<any>> {
      * @returns {Observable<InitState[K]>}
      * @memberof ProtoStore
      */
-    select<K extends keyof InitState>(entityName: K | void): K extends void ? Observable<InitState> : Observable<InitState[K]>;
+    select<K extends keyof InitState>(entityName: K | void): Observable<InitState[K] | InitState>;
     /**
      * Hack to get current value of Store as Object
      *
@@ -88,7 +88,9 @@ export declare class ProtoStore<InitState, EventScheme = HashMap<any>> {
      * @param eventName - event`s name to listen
      * @param callbackFn - function that gets payload of event as argument
      */
-    on(eventName: string, callbackFn: Function): this;
+    on(eventName: string, callbackFn: Function, options: {
+        once: boolean;
+    }): this;
     /**
      * For every list-entity in state returnes HashMap for easier using
      *

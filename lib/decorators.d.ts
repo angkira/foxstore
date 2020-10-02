@@ -18,6 +18,9 @@ export declare function Action(eventName: string, options?: IActionOptions): Met
  * @param {string} eventName
  * @returns {MethodDecorator}
  */
+/**
+ *
+ */
 export declare function Reducer(eventName: string): MethodDecorator;
 /**
  * Effect MethodDecorator for Store class, works by metadata of constructor.

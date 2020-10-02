@@ -1,6 +1,6 @@
-import { ReplaySubject, Observable, BehaviorSubject, Subject } from 'rxjs';
-import { map as rxMap, takeUntil, shareReplay} from 'rxjs/operators';
-import { last, path } from 'ramda';
+import { ReplaySubject, Observable, BehaviorSubject, Subject, identity, pipe } from 'rxjs';
+import { map as rxMap, takeUntil, shareReplay, take, map, distinctUntilChanged} from 'rxjs/operators';
+import { last, path, tap } from 'ramda';
 import { Dispatcher, Event } from './dispatcher';
 import { setupStoreEvents, setupStoreEventsFromDecorators } from './decorators';
 import { EventSchemeType, STORE_DECORATED_METAKEY } from "./types";
@@ -83,18 +83,17 @@ export class ProtoStore<InitState, EventScheme = HashMap<any>> {
      * @returns {Observable<InitState[K]>}
      * @memberof ProtoStore
      */
-    select<K extends keyof InitState>(entityName: K | void):
-        K extends void ? Observable<InitState> : Observable<InitState[K]> {
-          //@ts-ignore
-        return (entityName ?
+    select<K extends keyof InitState>(entityName: K | void): Observable<InitState[K] | InitState> {
+        return pipe(
+            distinctUntilChanged(),
+            takeUntil<InitState[K] | InitState>(this.eventDispatcher.destroy$),
+            shareReplay(1),
+        )( entityName ?
             this.store$.pipe(
                 rxMap(path<InitState[K]>([entityName as string])),
-            ) : this.store$.asObservable())
-            .pipe(
-                // @ts-ignore
-                takeUntil(this.eventDispatcher.destroy$),
-                shareReplay(1),
-            )
+                ) as Observable<InitState[K]>
+            : this.store$.asObservable() as Observable<InitState>
+            );
     }
 
     /**
@@ -152,9 +151,12 @@ export class ProtoStore<InitState, EventScheme = HashMap<any>> {
      * @param eventName - event`s name to listen
      * @param callbackFn - function that gets payload of event as argument
      */
-    on(eventName: string, callbackFn: Function): this {
+    on(eventName: string, callbackFn: Function, options: {
+        once: boolean,
+    }): this {
         this.eventDispatcher
             .listen(eventName)
+            .pipe((options.once ? take(1) : map(identity)))
             .subscribe((event: Event) => callbackFn(event.payload));
         return this;
     }
