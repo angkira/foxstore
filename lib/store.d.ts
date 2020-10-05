@@ -53,7 +53,7 @@ export declare class ProtoStore<InitState, EventScheme = HashMap<any>> {
      * @returns {Observable<InitState[K]>}
      * @memberof ProtoStore
      */
-    select<K extends keyof InitState>(entityName: K | void): Observable<InitState[K] | InitState>;
+    select<K extends keyof InitState>(entityName?: K): Observable<InitState[K] | InitState>;
     /**
      * Hack to get current value of Store as Object
      *

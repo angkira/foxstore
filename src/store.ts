@@ -74,7 +74,6 @@ export class ProtoStore<InitState, EventScheme = HashMap<any>> {
             !Reflect.getMetadata(STORE_DECORATED_METAKEY, this.constructor) &&
                 setupStoreEventsFromDecorators(this);
     }
-
     /**
      * Selecting stream with data from Store by key.
      *
@@ -83,17 +82,23 @@ export class ProtoStore<InitState, EventScheme = HashMap<any>> {
      * @returns {Observable<InitState[K]>}
      * @memberof ProtoStore
      */
-    select<K extends keyof InitState>(entityName: K | void): Observable<InitState[K] | InitState> {
-        return pipe(
-            distinctUntilChanged(),
-            takeUntil<InitState[K] | InitState>(this.eventDispatcher.destroy$),
-            shareReplay(1),
-        )( entityName ?
-            this.store$.pipe(
+    select<K extends keyof InitState>(entityName?: K): Observable<InitState[K] | InitState> {
+        if (entityName) {
+            return pipe(
+                distinctUntilChanged(),
+                takeUntil<InitState[K] | InitState>(this.eventDispatcher.destroy$),
+                shareReplay(1),
+            )(this.store$.pipe(
                 rxMap(path<InitState[K]>([entityName as string])),
-                ) as Observable<InitState[K]>
-            : this.store$.asObservable() as Observable<InitState>
-            );
+                ) as Observable<InitState[K]>)
+        } else {
+            return pipe(
+                distinctUntilChanged(),
+                takeUntil<InitState[K] | InitState>(this.eventDispatcher.destroy$),
+                shareReplay(1),
+            )(this.store$.asObservable() as Observable<InitState>);
+        }
+        
     }
 
     /**
