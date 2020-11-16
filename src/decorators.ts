@@ -215,8 +215,8 @@ function metaGetEntityPayload({eventDispatcher, store$}: ProtoStore<any>):
                         event.payload
                         : of(event.payload))
                             .pipe(take(1))),
-                withLatestFrom(store$),
                 shareReplay(1),
+                withLatestFrom(store$),
             );
 }
 

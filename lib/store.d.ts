@@ -61,7 +61,7 @@ export declare class ProtoStore<InitState, EventScheme = HashMap<any>> {
      * @type {InitState}
      * @memberof ProtoStore
      */
-    get snapshot(): InitState | {};
+    get snapshot(): InitState;
     /**
      * Patch current value of store by new.
      *

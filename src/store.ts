@@ -1,6 +1,6 @@
-import { ReplaySubject, Observable, BehaviorSubject, Subject, identity, pipe } from 'rxjs';
+import { Observable, BehaviorSubject, pipe } from 'rxjs';
 import { map as rxMap, takeUntil, shareReplay, take, map, distinctUntilChanged} from 'rxjs/operators';
-import { last, path, tap } from 'ramda';
+import { identity, path } from 'ramda';
 import { Dispatcher, Event } from './dispatcher';
 import { setupStoreEvents, setupStoreEventsFromDecorators } from './decorators';
 import { EventSchemeType, STORE_DECORATED_METAKEY } from "./types";
@@ -99,8 +99,8 @@ export class ProtoStore<InitState, EventScheme = HashMap<any>> {
      * @type {InitState}
      * @memberof ProtoStore
      */
-    get snapshot(): InitState | {} {
-        return this.store$.getValue();
+    get snapshot(): InitState {
+        return this.store$.getValue() as InitState;
     }
 
     /**
