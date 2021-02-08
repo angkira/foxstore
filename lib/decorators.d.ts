@@ -10,7 +10,7 @@ import { IActionOptions, EventSchemeType } from './types';
  * @param {IActionOptions} [options]
  * @returns {MethodDecorator}
  */
-export declare function Action(eventName: string, options?: IActionOptions): MethodDecorator;
+export declare function Action(eventName: string, options?: IActionOptions, outputEventName?: string): MethodDecorator;
 /**
  * Reducer MethodDecorator for Store class, works by metadata of constructor.
  *

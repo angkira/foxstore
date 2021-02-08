@@ -1,10 +1,10 @@
 import { ProtoStore, StoreOptions } from './store';
-import { withLatestFrom, mergeMap, take, shareReplay, tap, takeUntil, switchMap, share } from 'rxjs/operators';
+import { withLatestFrom, mergeMap, take, shareReplay, tap, takeUntil, share } from 'rxjs/operators';
 import { Dispatcher, Event } from './dispatcher';
-import { of, Subscription, Observable, combineLatest, merge, isObservable, noop } from 'rxjs';
+import { of, Observable, merge, isObservable, noop } from 'rxjs';
 import 'reflect-metadata';
 
-import { keys, values, forEach, map, compose } from 'ramda';
+import { keys } from 'ramda';
 import { IActionOptions, MetaAction, ACTION_METAKEY, ActionFn, ReducerFn, MetaReducer, REDUCER_METAKEY, MetaEffect, EFFECT_METAKEY, EventSchemeType, STORE_DECORATED_METAKEY, MetaType, simplyReducer } from './types';
 
 /**
@@ -15,10 +15,19 @@ import { IActionOptions, MetaAction, ACTION_METAKEY, ActionFn, ReducerFn, MetaRe
  * @param {IActionOptions} [options]
  * @returns {MethodDecorator}
  */
-export function Action(eventName: string, options?: IActionOptions): MethodDecorator {
-  return function(store: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) {
+export function Action(eventName: string, options?: IActionOptions, outputEventName?: string): MethodDecorator {
+  return function (store: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) {
     const actions: MetaAction[] = Reflect.getMetadata(ACTION_METAKEY, store.constructor) || [];
     const action = descriptor.value as ActionFn;
+
+    if (options?.writeAs) {
+      if (outputEventName) {
+        Reducer(outputEventName)(store, `${propertyKey as string}writeAs`,
+          {value: (payload: unknown) => ({ [options.writeAs]: payload })})  
+      } else {
+        console.error('You did not pass outputEventName for Action ' + (propertyKey as string));
+      }
+    }
 
     actions.push(new MetaAction(eventName, action, options));
     Reflect.defineMetadata(ACTION_METAKEY, actions, store.constructor);
@@ -38,7 +47,7 @@ export function Action(eventName: string, options?: IActionOptions): MethodDecor
  *
  */
 export function Reducer(eventName: string): MethodDecorator {
-  return function(store: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) {
+  return function (store: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) {
     const reducer: ReducerFn = descriptor.value;
     const reducers: MetaReducer[] = Reflect.getMetadata(REDUCER_METAKEY, store.constructor) || [];
     reducers.push(new MetaReducer(eventName, reducer));
@@ -54,7 +63,7 @@ export function Reducer(eventName: string): MethodDecorator {
  * @returns {MethodDecorator}
  */
 export function Effect(eventName: string): MethodDecorator {
-  return function(store: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) {
+  return function (store: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) {
     const effect = descriptor.value;
     const effects: MetaEffect[] = Reflect.getMetadata(EFFECT_METAKEY, store.constructor) || [];
     effects.push(new MetaEffect(eventName, effect));
@@ -78,11 +87,11 @@ export function Store<InitState extends Object = {}>(
   customDispatcher?: Dispatcher,
   eventScheme: EventSchemeType = {},
 ): any {
-  return function(target: any = Object): (args: any[]) => ProtoStore<typeof initState> {
+  return function (target: any = Object): (args: any[]) => ProtoStore<typeof initState> {
     // save a reference to the original constructor
 
     // The new constructor behaviour
-    const f: (args: any) => ProtoStore<InitState> = function(...args: any[]): ProtoStore<InitState> {
+    const f: (args: any) => ProtoStore<InitState> = function (...args: any[]): ProtoStore<InitState> {
       // const newInstance = new ProtoStore<typeof initState>(initState);
       // newInstance['__proto__'] = original.prototype;
 
@@ -93,7 +102,6 @@ export function Store<InitState extends Object = {}>(
       newInstance.eventDispatcher = customDispatcher || newInstance.eventDispatcher;
 
       setupEventsSchemeFromDecorators<InitState>(newInstance, eventScheme);
-
 
       // Copy metadata from decorated class to new instance
       Reflect.getMetadataKeys(target)
@@ -133,7 +141,7 @@ export const setupEventsSchemeFromDecorators = <InitState>(store: ProtoStore<Ini
       scheme[entity.eventName][entityName] ||= [];
       (scheme[entity.eventName][entityName] as (typeof entity)[]).push(entity);
       return scheme;
-  }
+    }
 
   effects.reduce(entityReducer('effects'), metadataEventScheme);
   actions.reduce(entityReducer('actions'), metadataEventScheme);
@@ -159,20 +167,24 @@ export const setupStoreEvents = <State, Scheme>(eventScheme: EventSchemeType = {
           tap(([payloadObject, state]) => {
             const logger = (newInstance.options?.logOn &&
               newInstance.options?.logger) || noop;
-            
-            logger({
-                event: eventName,
-                payload: payloadObject
-              });
 
-            if (eventScheme[eventName].reducers instanceof Array && eventScheme[eventName].reducers?.length) {
+            logger({
+              event: eventName,
+              payload: payloadObject
+            });
+
+            if (eventScheme[eventName].reducers instanceof Array
+                && eventScheme[eventName].reducers?.length) {
               reducerHandler(payloadObject, state)(eventScheme[eventName].reducers as MetaReducer[]);
             }
-            if (eventScheme[eventName].effects instanceof Array && eventScheme[eventName].effects?.length) {
+
+            if (eventScheme[eventName].effects instanceof Array
+                && eventScheme[eventName].effects?.length) {
               effectHandler(payloadObject, state)(eventScheme[eventName].effects as MetaEffect[]);
             }
-            if (eventScheme[eventName].actions instanceof Array && eventScheme[eventName].actions?.length) {
-              
+
+            if (eventScheme[eventName].actions instanceof Array
+                && eventScheme[eventName].actions?.length) {
               isObservable(payloadObject) ?
                 payloadObject.pipe(take(1)).subscribe(payload =>
                   actionHandler(payload, state)(eventScheme[eventName].actions as MetaAction[]))
@@ -181,11 +193,11 @@ export const setupStoreEvents = <State, Scheme>(eventScheme: EventSchemeType = {
           }),
         ));
 
-      merge(
-        ...payloadStreams
-      ).pipe(
-        takeUntil(newInstance.eventDispatcher.destroy$),
-      ).subscribe();
+    merge(
+      ...payloadStreams
+    ).pipe(
+      takeUntil(newInstance.eventDispatcher.destroy$),
+    ).subscribe();
 
     return newInstance;
   }
@@ -195,22 +207,22 @@ export const setupStoreEvents = <State, Scheme>(eventScheme: EventSchemeType = {
  * Get event payload
  * @param instance - Store instance
  */
-function metaGetEntityPayload<State>({eventDispatcher, store$}: ProtoStore<State>):
-    (eventName: string) => Observable<[any, State]> {
-    return (eventName: string) =>
-        eventDispatcher
-            .listen(eventName)
-            .pipe(
-                // tap(x => console.log(x)), // TODO: create Log-plugin to log events. ReduxTools - maybe
-                shareReplay(1),
-                mergeMap((event: Event) =>
-                    (event.async ?
-                        event.payload
-                        : of(event.payload))
-                            .pipe(take(1))),
-                withLatestFrom(store$.asObservable() as Observable<State>),
-                share(),
-            );
+function metaGetEntityPayload<State>({ eventDispatcher, store$ }: ProtoStore<State>):
+  (eventName: string) => Observable<[any, State]> {
+  return (eventName: string) =>
+    eventDispatcher
+      .listen(eventName)
+      .pipe(
+        // tap(x => console.log(x)), // TODO: create Log-plugin to log events. ReduxTools - maybe
+        shareReplay(1),
+        mergeMap((event: Event) =>
+          (event.async ?
+            event.payload
+            : of(event.payload))
+            .pipe(take(1))),
+        withLatestFrom(store$.asObservable() as Observable<State>),
+        share(),
+      );
 }
 
 /**
@@ -223,9 +235,9 @@ function reducerMetaHandler<State>(instance: ProtoStore<State>) {
       let result = state;
       reducers.forEach(reducer => {
         result = reducer.reducer.call(instance, payload, result);
-        instance.options.logger &&
+  
+        instance.options.logOn && instance.options.logger &&
           instance.options.logger(`REDUCER: ${reducer.reducer.name}`);
-        
       });
       instance.patch(result);
     }
@@ -248,25 +260,23 @@ function effectMetaHandler<State>(instance: ProtoStore<State>) {
  */
 function actionMetaHandler<State>(instance: ProtoStore<State>) {
   return (payload: unknown, state: State) =>
-    (actions: MetaAction[]) =>  
-        actions.forEach(action => {
-          const result = action.action.call(instance, payload, state) as Event;
-          instance.eventDispatcher.dispatch(result);
+    (actions: MetaAction[]) =>
+      actions.forEach(action => {
+        const result = action.action.call(instance, payload, state) as Event;
+        instance.eventDispatcher.dispatch(result);
 
-          const patch = (payload: unknown) => instance.patch(
-              simplyReducer(action.options?.writeAs)
-                .call(
-                  instance,
-                  payload,
-                  state
-                ));
+        instance.options.logOn && instance.options.logger &&
+          instance.options.logger(`ACTION: ${action.action.name}`);
 
-          if (action.options?.writeAs) {
-            isObservable(result.payload) ?
-              result.payload.pipe(take(1)).subscribe(patch)
-              : patch(result.payload);
-          }
-        });
+        // TODO: Add writeAs support
+        // instance.patch(
+        //   simplyReducer(action.options?.writeAs)
+        //     .call(
+        //       instance,
+        //       result.payload,
+        //       state
+        //     ));
+      });
 }
 
 /**
