@@ -1,8 +1,8 @@
 import { Observable, BehaviorSubject, pipe } from 'rxjs';
 import { map as rxMap, takeUntil, shareReplay, take, map, distinctUntilChanged} from 'rxjs/operators';
-import { identity, path } from 'ramda';
+import { identity, mergeDeepLeft, mergeDeepRight, path } from 'ramda';
 import { Dispatcher, Event } from './dispatcher';
-import { setupStoreEvents, setupStoreEventsFromDecorators } from './decorators';
+import { setupStoreEvents, setupEventsSchemeFromDecorators } from './decorators';
 import { EventSchemeType, STORE_DECORATED_METAKEY } from "./types";
 import 'reflect-metadata';
 
@@ -25,13 +25,17 @@ export function toHashMap<T>(key: string): (list: T[]) => HashMap<T> {
 
 export interface StoreOptions {
     storeName?: string;
-    needHashMap: boolean;
+    logger?: (...args: unknown[]) => void;    
+    logOn?: boolean;
+    needHashMap?: boolean;
     HashMapKey?: string;
     HashMapFn?: (...args: any[]) => string | number | Symbol; // In the Future
 }
 
 export const DefaultStoreOptions: StoreOptions = {
     needHashMap: true,
+    logOn: false,
+    logger: console.log,
 }
 
 /**
@@ -57,22 +61,26 @@ export class ProtoStore<InitState, EventScheme = HashMap<any>> {
      */
     readonly eventDispatcher: Dispatcher;
 
+    public options: StoreOptions;
+    public eventScheme: EventSchemeType = {};
+
     constructor(
         initState?: InitState,
-        private options: StoreOptions | null = DefaultStoreOptions,
+        options: StoreOptions | null = DefaultStoreOptions,
         customDispatcher?: Dispatcher | null,
-        eventScheme?: EventSchemeType,
+        extraEventScheme?: EventSchemeType,
         ) {
             initState && this.patch(initState);
+
+            this.options = Object.assign(DefaultStoreOptions, options);
 
             this.eventDispatcher = customDispatcher
                 || new Dispatcher(new Event('storeInit'));
 
-            eventScheme &&
-                setupStoreEvents<InitState, EventScheme>(eventScheme)(this);
-
             !Reflect.getMetadata(STORE_DECORATED_METAKEY, this.constructor) &&
-                setupStoreEventsFromDecorators(this);
+                setupEventsSchemeFromDecorators(this, extraEventScheme);
+
+            setupStoreEvents<InitState, EventScheme>(this.eventScheme)(this);
     }
     /**
      * Selecting stream with data from Store by key.

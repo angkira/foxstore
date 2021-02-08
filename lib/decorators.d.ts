@@ -1,4 +1,4 @@
-import { ProtoStore, StoreOptions, HashMap } from './store';
+import { ProtoStore, StoreOptions } from './store';
 import { Dispatcher } from './dispatcher';
 import 'reflect-metadata';
 import { IActionOptions, EventSchemeType } from './types';
@@ -46,7 +46,7 @@ export declare function Store<InitState extends Object = {}>(initState?: InitSta
  * @param store
  * @param eventScheme
  */
-export declare const setupStoreEventsFromDecorators: <InitState>(store: ProtoStore<InitState, HashMap<any>>, eventScheme?: EventSchemeType) => void;
+export declare const setupEventsSchemeFromDecorators: <InitState>(store: ProtoStore<InitState, import("./store").HashMap<any>>, eventScheme?: EventSchemeType) => void;
 /**
  * Setup handling of Reducers, Actions, SideEffects without Decorator,
  * Use it in Constructor if you use Angular Injectable

@@ -1,5 +1,5 @@
 import { ReplaySubject, Observable } from 'rxjs';
-import { filter, takeWhile } from 'rxjs/operators';
+import { filter, shareReplay, takeWhile } from 'rxjs/operators';
 
 /**
  * Atomaric data-unit, that may contain info
@@ -45,6 +45,7 @@ export class Dispatcher {
                 filter((event: Event) =>
                     event.name === eventName),
                     // tap(console.log) Turn on to log events by subscription
+                shareReplay(1),
             );
     }
 

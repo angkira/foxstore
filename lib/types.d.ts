@@ -15,12 +15,15 @@ export declare const simplyReducer: ReducerFn;
 export interface IActionOptions {
     writeAs: string;
 }
+export interface MetaType {
+    eventName: string;
+}
 /**
  * Entity for interaction with ethernal system, like asynchronous actions (HttpRequest, etc.)
  *
  * @class MetaAction
  */
-export declare class MetaAction {
+export declare class MetaAction implements MetaType {
     eventName: string;
     action: ActionFn;
     options?: IActionOptions | undefined;
@@ -31,7 +34,7 @@ export declare class MetaAction {
  *
  * @class MetaReducer
  */
-export declare class MetaReducer {
+export declare class MetaReducer implements MetaType {
     eventName: string;
     reducer: ReducerFn;
     options?: IActionOptions | undefined;
@@ -42,13 +45,12 @@ export declare class MetaReducer {
  *
  * @class MetaEffect
  */
-export declare class MetaEffect {
+export declare class MetaEffect implements MetaType {
     eventName: string;
     effect: EffectFn;
     options?: IActionOptions | undefined;
     constructor(eventName: string, effect: EffectFn, options?: IActionOptions | undefined);
 }
-export declare type MetaType = MetaAction | MetaReducer | MetaEffect;
 export declare type EventConfig = {
     actions?: MetaAction[];
     reducers?: MetaReducer[];

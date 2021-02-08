@@ -15,12 +15,17 @@ export const simplyReducer: ReducerFn = (fieldName: string) => (payload: any) =>
 export interface IActionOptions {
     writeAs: string; // To write gotten info exactly into Store as entity with selected name
 }
+
+export interface MetaType {
+    eventName: string;
+}
+
 /**
  * Entity for interaction with ethernal system, like asynchronous actions (HttpRequest, etc.)
  *
  * @class MetaAction
  */
-export class MetaAction {
+export class MetaAction implements MetaType {
     constructor(public eventName: string, public action: ActionFn, public options?: IActionOptions) { }
 }
 /**
@@ -28,7 +33,7 @@ export class MetaAction {
  *
  * @class MetaReducer
  */
-export class MetaReducer {
+export class MetaReducer implements MetaType {
     constructor(public eventName: string, public reducer: ReducerFn, public options?: IActionOptions) { }
 }
 /**
@@ -36,10 +41,10 @@ export class MetaReducer {
  *
  * @class MetaEffect
  */
-export class MetaEffect {
+export class MetaEffect implements MetaType {
     constructor(public eventName: string, public effect: EffectFn, public options?: IActionOptions) { }
 }
-export type MetaType = MetaAction | MetaReducer | MetaEffect;
+
 export type EventConfig = {
     actions?: MetaAction[];
     reducers?: MetaReducer[];

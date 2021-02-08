@@ -16,7 +16,9 @@ export declare type HashMap<T> = {
 export declare function toHashMap<T>(key: string): (list: T[]) => HashMap<T>;
 export interface StoreOptions {
     storeName?: string;
-    needHashMap: boolean;
+    logger?: (...args: unknown[]) => void;
+    logOn?: boolean;
+    needHashMap?: boolean;
     HashMapKey?: string;
     HashMapFn?: (...args: any[]) => string | number | Symbol;
 }
@@ -29,7 +31,6 @@ export declare const DefaultStoreOptions: StoreOptions;
  * @template InitState - type | interface for state of Store
  */
 export declare class ProtoStore<InitState, EventScheme = HashMap<any>> {
-    private options;
     /**
      * Subject that contains
      *
@@ -44,7 +45,9 @@ export declare class ProtoStore<InitState, EventScheme = HashMap<any>> {
      * @memberof ProtoStore
      */
     readonly eventDispatcher: Dispatcher;
-    constructor(initState?: InitState, options?: StoreOptions | null, customDispatcher?: Dispatcher | null, eventScheme?: EventSchemeType);
+    options: StoreOptions;
+    eventScheme: EventSchemeType;
+    constructor(initState?: InitState, options?: StoreOptions | null, customDispatcher?: Dispatcher | null, extraEventScheme?: EventSchemeType);
     /**
      * Selecting stream with data from Store by key.
      *
