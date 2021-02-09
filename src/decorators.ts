@@ -25,7 +25,7 @@ export function Action(eventName: string, options?: IActionOptions, outputEventN
         Reducer(outputEventName)(store, `${propertyKey as string}writeAs`,
           {value: (payload: unknown) => ({ [options.writeAs]: payload })})  
       } else {
-        console.error('You did not pass outputEventName for Action ' + (propertyKey as string));
+        throw new Error('You did not pass outputEventName for Action ' + (propertyKey as string));
       }
     }
 
