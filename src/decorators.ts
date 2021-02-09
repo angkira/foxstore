@@ -165,8 +165,9 @@ export const setupStoreEvents = <State, Scheme>(eventScheme: EventSchemeType = {
       .map((eventName: string) =>
         metaGetEntityPayload(newInstance)(eventName).pipe(
           tap(([payloadObject, state]) => {
-            const logger = (newInstance.options?.logOn &&
-              newInstance.options?.logger) || noop;
+            const logger = (newInstance.options?.logOn
+              && newInstance.options?.logOptions?.events
+              && newInstance.options?.logger) || noop;
 
             logger({
               event: eventName,
@@ -213,7 +214,6 @@ function metaGetEntityPayload<State>({ eventDispatcher, store$ }: ProtoStore<Sta
     eventDispatcher
       .listen(eventName)
       .pipe(
-        // tap(x => console.log(x)), // TODO: create Log-plugin to log events. ReduxTools - maybe
         shareReplay(1),
         mergeMap((event: Event) =>
           (event.async ?
@@ -233,12 +233,15 @@ function reducerMetaHandler<State>(instance: ProtoStore<State>) {
   return (payload: unknown, state: State) =>
     (reducers: MetaReducer[]) => {
       let result = state;
+
       reducers.forEach(reducer => {
         result = reducer.reducer.call(instance, payload, result);
   
-        instance.options.logOn && instance.options.logger &&
-          instance.options.logger(`REDUCER: ${reducer.reducer.name}`);
+        instance.options.logOn && instance.options.logger
+          && instance.options.logOptions?.reducers
+          && instance.options.logger(`REDUCER: ${reducer.reducer.name}`);
       });
+
       instance.patch(result);
     }
 }
@@ -250,8 +253,14 @@ function reducerMetaHandler<State>(instance: ProtoStore<State>) {
 function effectMetaHandler<State>(instance: ProtoStore<State>) {
   return (payload: unknown, state: State) =>
     (effects: MetaEffect[]) =>
-      effects.forEach(effect =>
-        effect.effect.call(instance, payload, state));
+      effects.forEach(effect => {
+        effect.effect.call(instance, payload, state);
+
+        instance.options.logOn && instance.options.logger
+          && instance.options.logOptions?.effects
+          && instance.options.logger(`EFFECT: ${effect.effect.name}`);
+      });
+        
 }
 
 /**
@@ -265,8 +274,9 @@ function actionMetaHandler<State>(instance: ProtoStore<State>) {
         const result = action.action.call(instance, payload, state) as Event;
         instance.eventDispatcher.dispatch(result);
 
-        instance.options.logOn && instance.options.logger &&
-          instance.options.logger(`ACTION: ${action.action.name}`);
+        instance.options.logOn && instance.options.logger
+          && instance.options.logOptions?.actions
+          && instance.options.logger(`ACTION: ${action.action.name}`);
 
         // TODO: Add writeAs support
         // instance.patch(

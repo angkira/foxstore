@@ -23,10 +23,18 @@ export function toHashMap<T>(key: string): (list: T[]) => HashMap<T> {
                 acc[item[key]] = item, {});
 }
 
+interface LogOptions {
+    events?: boolean;
+    reducers?: boolean;
+    actions?: boolean;
+    effects?: boolean;
+}
+
 export interface StoreOptions {
     storeName?: string;
     logger?: (...args: unknown[]) => void;    
     logOn?: boolean;
+    logOptions?: LogOptions;
     needHashMap?: boolean;
     HashMapKey?: string;
     HashMapFn?: (...args: any[]) => string | number | Symbol; // In the Future
@@ -36,6 +44,9 @@ export const DefaultStoreOptions: StoreOptions = {
     needHashMap: true,
     logOn: false,
     logger: console.log,
+    logOptions: {
+        events: true,
+    },
 }
 
 /**
@@ -72,7 +83,7 @@ export class ProtoStore<InitState, EventScheme = HashMap<any>> {
         ) {
             initState && this.patch(initState);
 
-            this.options = Object.assign(DefaultStoreOptions, options);
+            this.options = Object.assign({}, DefaultStoreOptions, options);
 
             this.eventDispatcher = customDispatcher
                 || new Dispatcher(new Event('storeInit'));

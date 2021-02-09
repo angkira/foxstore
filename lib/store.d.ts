@@ -14,10 +14,17 @@ export declare type HashMap<T> = {
  * @returns
  */
 export declare function toHashMap<T>(key: string): (list: T[]) => HashMap<T>;
+interface LogOptions {
+    events?: boolean;
+    reducers?: boolean;
+    actions?: boolean;
+    effects?: boolean;
+}
 export interface StoreOptions {
     storeName?: string;
     logger?: (...args: unknown[]) => void;
     logOn?: boolean;
+    logOptions?: LogOptions;
     needHashMap?: boolean;
     HashMapKey?: string;
     HashMapFn?: (...args: any[]) => string | number | Symbol;
@@ -106,3 +113,4 @@ export declare class ProtoStore<InitState, EventScheme = HashMap<any>> {
      */
     destroy(): void;
 }
+export {};
