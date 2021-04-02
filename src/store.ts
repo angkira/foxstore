@@ -129,7 +129,7 @@ export class ProtoStore<InitState, EventScheme = HashMap<any>> {
      * @returns {this}
      * @memberof ProtoStore
      */
-    patch(update: InitState): this {
+    patch(update: Partial<InitState>): this {
         this.store$.next(
                 Object.assign({}, this.snapshot, update,
                     this.options?.needHashMap ?
@@ -180,7 +180,7 @@ export class ProtoStore<InitState, EventScheme = HashMap<any>> {
      * For every list-entity in state returnes HashMap for easier using
      *
      */
-    private getHashMap(value: InitState): HashMap<any> {
+    private getHashMap(value: Partial<InitState>): HashMap<any> {
         if (!this.options || !this.options.HashMapKey) {
             return {};
         } else {

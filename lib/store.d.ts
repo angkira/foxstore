@@ -79,7 +79,7 @@ export declare class ProtoStore<InitState, EventScheme = HashMap<any>> {
      * @returns {this}
      * @memberof ProtoStore
      */
-    patch(update: InitState): this;
+    patch(update: Partial<InitState>): this;
     /**
      * Clears the Store state by empty object.
      *

@@ -1,7 +1,7 @@
 import { ProtoStore, StoreOptions } from './store';
 import { withLatestFrom, mergeMap, take, shareReplay, tap, takeUntil, share } from 'rxjs/operators';
 import { Dispatcher, Event } from './dispatcher';
-import { of, Observable, merge, isObservable, noop } from 'rxjs';
+import { of, Observable, merge, isObservable, noop, combineLatest } from 'rxjs';
 import 'reflect-metadata';
 
 import { keys } from 'ramda';
@@ -15,7 +15,7 @@ import { IActionOptions, MetaAction, ACTION_METAKEY, ActionFn, ReducerFn, MetaRe
  * @param {IActionOptions} [options]
  * @returns {MethodDecorator}
  */
-export function Action(eventName: string, options?: IActionOptions, outputEventName?: string): MethodDecorator {
+export function Action(eventName: string | string[], options?: IActionOptions, outputEventName?: string): MethodDecorator {
   return function (store: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) {
     const actions: MetaAction[] = Reflect.getMetadata(ACTION_METAKEY, store.constructor) || [];
     const action = descriptor.value as ActionFn;
@@ -29,9 +29,14 @@ export function Action(eventName: string, options?: IActionOptions, outputEventN
       }
     }
 
-    actions.push(new MetaAction(eventName, action, options));
+    if (typeof eventName === 'string') {
+      actions.push(new MetaAction(eventName, action, options));
+    } else if (eventName?.length) {
+      eventName.forEach(event =>
+        actions.push(new MetaAction(event, action, options)))
+    }
+    
     Reflect.defineMetadata(ACTION_METAKEY, actions, store.constructor);
-
   };
 }
 
@@ -46,11 +51,18 @@ export function Action(eventName: string, options?: IActionOptions, outputEventN
 /**
  *
  */
-export function Reducer(eventName: string): MethodDecorator {
+export function Reducer(eventName: string | string[]): MethodDecorator {
   return function (store: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) {
     const reducer: ReducerFn = descriptor.value;
     const reducers: MetaReducer[] = Reflect.getMetadata(REDUCER_METAKEY, store.constructor) || [];
-    reducers.push(new MetaReducer(eventName, reducer));
+
+    if (typeof eventName === 'string') {
+      reducers.push(new MetaReducer(eventName, reducer));
+    } else if (eventName?.length) {
+      eventName.forEach(event =>
+        reducers.push(new MetaReducer(event, reducer)))
+    }
+
     Reflect.defineMetadata(REDUCER_METAKEY, reducers, store.constructor);
   };
 }
@@ -62,11 +74,18 @@ export function Reducer(eventName: string): MethodDecorator {
  * @param {string} eventName
  * @returns {MethodDecorator}
  */
-export function Effect(eventName: string): MethodDecorator {
+export function Effect(eventName: string | string[]): MethodDecorator {
   return function (store: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) {
     const effect = descriptor.value;
     const effects: MetaEffect[] = Reflect.getMetadata(EFFECT_METAKEY, store.constructor) || [];
-    effects.push(new MetaEffect(eventName, effect));
+
+    if (typeof eventName === 'string') {
+      effects.push(new MetaEffect(eventName, effect));
+    } else if (eventName?.length) {
+      eventName.forEach(event =>
+        effects.push(new MetaEffect(event, effect)))
+    }
+    
     Reflect.defineMetadata(EFFECT_METAKEY, effects, store.constructor);
   };
 }
@@ -211,18 +230,21 @@ export const setupStoreEvents = <State, Scheme>(eventScheme: EventSchemeType = {
 function metaGetEntityPayload<State>({ eventDispatcher, store$ }: ProtoStore<State>):
   (eventName: string) => Observable<[any, State]> {
   return (eventName: string) =>
-    eventDispatcher
-      .listen(eventName)
-      .pipe(
-        shareReplay(1),
-        mergeMap((event: Event) =>
-          (event.async ?
-            event.payload
-            : of(event.payload))
-            .pipe(take(1))),
-        withLatestFrom(store$.asObservable() as Observable<State>),
-        share(),
-      );
+    combineLatest([
+      eventDispatcher
+        .listen(eventName)
+        .pipe(
+          shareReplay(1),
+          mergeMap((event: Event) =>
+            (event.async ?
+              event.payload
+              : of(event.payload))
+              .pipe(take(1))
+              ),
+          share<any>(),
+          ),
+        (store$ as Observable<State>).pipe(take(1)),
+      ]);
 }
 
 /**
@@ -235,14 +257,14 @@ function reducerMetaHandler<State>(instance: ProtoStore<State>) {
       let result = state;
 
       reducers.forEach(reducer => {
-        result = reducer.reducer.call(instance, payload, result);
+        Object.assign(result, reducer.reducer.call(instance, payload, result));
+
+        instance.patch(result);
   
         instance.options.logOn && instance.options.logger
           && instance.options.logOptions?.reducers
           && instance.options.logger(`REDUCER: ${reducer.reducer.name}`);
       });
-
-      instance.patch(result);
     }
 }
 
