@@ -4,8 +4,8 @@ import { Dispatcher, Event } from './dispatcher';
 import { of, Observable, merge, isObservable, noop, combineLatest } from 'rxjs';
 import 'reflect-metadata';
 
-import { keys } from 'ramda';
-import { IActionOptions, MetaAction, ACTION_METAKEY, ActionFn, ReducerFn, MetaReducer, REDUCER_METAKEY, MetaEffect, EFFECT_METAKEY, EventSchemeType, STORE_DECORATED_METAKEY, MetaType, simplyReducer } from './types';
+import { assocPath, keys } from 'ramda';
+import { IActionOptions, MetaAction, ACTION_METAKEY, ActionFn, ReducerFn, MetaReducer, REDUCER_METAKEY, MetaEffect, EFFECT_METAKEY, EventSchemeType, STORE_DECORATED_METAKEY, MetaType } from './types';
 
 /**
  * Action MethodDecorator for Store class, works by metadata of constructor.
@@ -23,7 +23,9 @@ export function Action(eventName: string | string[], options?: IActionOptions, o
     if (options?.writeAs) {
       if (outputEventName) {
         Reducer(outputEventName)(store, `${propertyKey as string}writeAs`,
-          {value: (payload: unknown) => ({ [options.writeAs]: payload })})  
+          {value: (payload: unknown) =>
+            assocPath(options?.writeAs.split('.'), payload)({})},
+            )
       } else {
         throw new Error('You did not pass outputEventName for Action ' + (propertyKey as string));
       }
@@ -101,8 +103,8 @@ export function Effect(eventName: string | string[]): MethodDecorator {
  * @param {Dispatcher} [customDispatcher]
  * @returns {*}
  */
-export function Store<InitState extends Object = {}>(
-  initState?: InitState,
+export function Store<InitState extends object = {}>(
+  initState: InitState = Object(),
   customDispatcher?: Dispatcher,
   eventScheme: EventSchemeType = {},
 ): any {
@@ -144,7 +146,7 @@ export function Store<InitState extends Object = {}>(
  * @param store
  * @param eventScheme
  */
-export const setupEventsSchemeFromDecorators = <InitState>(store: ProtoStore<InitState>, eventScheme: EventSchemeType = {}) => {
+export const setupEventsSchemeFromDecorators = <InitState extends object>(store: ProtoStore<InitState>, eventScheme: EventSchemeType = {}) => {
   const effects: MetaEffect[] = Reflect.getMetadata(EFFECT_METAKEY, store.constructor)
     || [];
   const reducers: MetaReducer[] = Reflect.getMetadata(REDUCER_METAKEY, store.constructor)
@@ -172,7 +174,7 @@ export const setupEventsSchemeFromDecorators = <InitState>(store: ProtoStore<Ini
  * Setup handling of Reducers, Actions, SideEffects without Decorator,
  * Use it in Constructor if you use Angular Injectable
  */
-export const setupStoreEvents = <State, Scheme>(eventScheme: EventSchemeType = {}) =>
+export const setupStoreEvents = <State extends object, Scheme>(eventScheme: EventSchemeType = {}) =>
   (newInstance: ProtoStore<State, Scheme>) => {
     const reducerHandler = reducerMetaHandler(newInstance);
 
@@ -227,7 +229,7 @@ export const setupStoreEvents = <State, Scheme>(eventScheme: EventSchemeType = {
  * Get event payload
  * @param instance - Store instance
  */
-function metaGetEntityPayload<State>({ eventDispatcher, store$ }: ProtoStore<State>):
+function metaGetEntityPayload<State extends object>({ eventDispatcher, store$ }: ProtoStore<State>):
   (eventName: string) => Observable<[any, State]> {
   return (eventName: string) =>
     combineLatest([
@@ -251,7 +253,7 @@ function metaGetEntityPayload<State>({ eventDispatcher, store$ }: ProtoStore<Sta
  * Handler for reducer
  * @param instance
  */
-function reducerMetaHandler<State>(instance: ProtoStore<State>) {
+function reducerMetaHandler<State extends object>(instance: ProtoStore<State>) {
   return (payload: unknown, state: State) =>
     (reducers: MetaReducer[]) => {
       let result = state;
@@ -272,7 +274,7 @@ function reducerMetaHandler<State>(instance: ProtoStore<State>) {
  * Handler for Effect
  * @param instance
  */
-function effectMetaHandler<State>(instance: ProtoStore<State>) {
+function effectMetaHandler<State extends object>(instance: ProtoStore<State>) {
   return (payload: unknown, state: State) =>
     (effects: MetaEffect[]) =>
       effects.forEach(effect => {
@@ -289,7 +291,7 @@ function effectMetaHandler<State>(instance: ProtoStore<State>) {
  * Handler for Action
  * @param instance
  */
-function actionMetaHandler<State>(instance: ProtoStore<State>) {
+function actionMetaHandler<State extends object>(instance: ProtoStore<State>) {
   return (payload: unknown, state: State) =>
     (actions: MetaAction[]) =>
       actions.forEach(action => {
@@ -321,7 +323,7 @@ function actionMetaHandler<State>(instance: ProtoStore<State>) {
  *
  * @deprecated - Now you can give EventScheme to Store conctructor
  */
-export const createStore = <InitState,
+export const createStore = <InitState extends object,
   SchemeType extends EventSchemeType>(
     initState?: InitState,
     customDispatcher?: Dispatcher | null,

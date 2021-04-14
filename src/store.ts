@@ -1,6 +1,6 @@
 import { Observable, BehaviorSubject, pipe } from 'rxjs';
 import { map as rxMap, takeUntil, shareReplay, take, map, distinctUntilChanged} from 'rxjs/operators';
-import { identity, mergeDeepLeft, mergeDeepRight, path } from 'ramda';
+import { identity, mergeDeepRight, path } from 'ramda';
 import { Dispatcher, Event } from './dispatcher';
 import { setupStoreEvents, setupEventsSchemeFromDecorators } from './decorators';
 import { EventSchemeType, STORE_DECORATED_METAKEY } from "./types";
@@ -28,6 +28,7 @@ interface LogOptions {
     reducers?: boolean;
     actions?: boolean;
     effects?: boolean;
+    state?: boolean;
 }
 
 export interface StoreOptions {
@@ -54,16 +55,16 @@ export const DefaultStoreOptions: StoreOptions = {
  *
  * @export
  * @class ProtoStore
- * @template InitState - type | interface for state of Store
+ * @template State - type | interface for state of Store
  */
-export class ProtoStore<InitState, EventScheme = HashMap<any>> {
+export class ProtoStore<State extends object, EventScheme = HashMap<any>> {
     /**
      * Subject that contains
      *
-     * @type {(ReplaySubject<InitState | {}>)}
+     * @type {(ReplaySubject<State | {}>)}
      * @memberof ProtoStore
      */
-    readonly store$: BehaviorSubject<InitState | {}> = new BehaviorSubject<InitState | {}>({});
+    readonly store$: BehaviorSubject<State | {}> = new BehaviorSubject<State | {}>({});
     /**
      * Private event-bus-driver for this Store, to create Event-Namespace
      *
@@ -76,7 +77,7 @@ export class ProtoStore<InitState, EventScheme = HashMap<any>> {
     public eventScheme: EventSchemeType = {};
 
     constructor(
-        initState?: InitState,
+        initState?: State,
         options: StoreOptions | null = DefaultStoreOptions,
         customDispatcher?: Dispatcher | null,
         extraEventScheme?: EventSchemeType,
@@ -91,50 +92,60 @@ export class ProtoStore<InitState, EventScheme = HashMap<any>> {
             !Reflect.getMetadata(STORE_DECORATED_METAKEY, this.constructor) &&
                 setupEventsSchemeFromDecorators(this, extraEventScheme);
 
-            setupStoreEvents<InitState, EventScheme>(this.eventScheme)(this);
+            setupStoreEvents<State, EventScheme>(this.eventScheme)(this);
     }
     /**
      * Selecting stream with data from Store by key.
      *
      * @template K
      * @param {K} [entityName] key of Entity from Store. If empty - returns all the Store.
-     * @returns {Observable<InitState[K]>}
+     * @returns {Observable<State[K]>}
      * @memberof ProtoStore
      */
-    select<K extends keyof InitState>(entityName: K): Observable<InitState[K]> {
+    select<K extends keyof State>(entityName: K): Observable<State[K]> {
         return pipe(
             distinctUntilChanged(),
-            takeUntil<InitState[K]>(this.eventDispatcher.destroy$),
+            takeUntil<State[K]>(this.eventDispatcher.destroy$),
             shareReplay(1),
         )(this.store$.pipe(
                 rxMap(path([entityName as string])),
-                ) as Observable<InitState[K]>);
+                ) as Observable<State[K]>);
     }
 
     /**
      * Hack to get current value of Store as Object
      *
      * @readonly
-     * @type {InitState}
+     * @type {State}
      * @memberof ProtoStore
      */
-    get snapshot(): InitState {
-        return this.store$.getValue() as InitState;
+    get snapshot(): State {
+        return this.store$.getValue() as State;
     }
 
     /**
      * Patch current value of store by new.
      *
-     * @param {InitState} update
+     * @param {State} update
      * @returns {this}
      * @memberof ProtoStore
      */
-    patch(update: Partial<InitState>): this {
+    patch(update: Partial<State>): this {
+        const patchedState = Object.assign(
+            mergeDeepRight<State, Partial<State>>(
+                this.snapshot, update
+            ),
+            this.options?.needHashMap ?
+                this.getHashMap(update) : {});
         this.store$.next(
-                Object.assign({}, this.snapshot, update,
-                    this.options?.needHashMap ?
-                        this.getHashMap(update) : {}));
-        // console.log('store patched by ', update); Turn on to watch Store changes
+                patchedState);
+
+        this.options.logOn
+            && this.options.logOptions?.state
+            && this.options.logger
+            && this.options.logger(`${
+                this.options?.storeName || this['constructor'].name
+            } | State updated: `, patchedState)
 
         return this;
     }
@@ -180,7 +191,7 @@ export class ProtoStore<InitState, EventScheme = HashMap<any>> {
      * For every list-entity in state returnes HashMap for easier using
      *
      */
-    private getHashMap(value: Partial<InitState>): HashMap<any> {
+    private getHashMap(value: Partial<State>): HashMap<any> {
         if (!this.options || !this.options.HashMapKey) {
             return {};
         } else {
