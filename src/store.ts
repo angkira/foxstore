@@ -140,7 +140,7 @@ export class ProtoStore<State extends object, EventScheme = HashMap<any>> {
         this.store$.next(
                 patchedState);
 
-        this.options.logOn
+        this.options?.logOn
             && this.options.logOptions?.state
             && this.options.logger
             && this.options.logger(`${
