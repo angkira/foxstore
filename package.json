@@ -1,6 +1,6 @@
 {
   "name": "foxstore",
-  "version": "2.9.5",
+  "version": "2.9.6",
   "description": "Reactive Event-Driven Storage for WebApplications based on RxJs (reactive extensions)",
   "main": "lib/index",
   "keywords": [
@@ -16,7 +16,7 @@
   ],
   "scripts": {
     "build": "tsc",
-    "prepublishOnly": "tsc && node node_modules/@jsdevtools/version-bump-prompt/bin/bump.js patch --commit --push --tag"
+    "prepublishOnly": "tsc && node node_modules/@jsdevtools/version-bump-prompt/bin/bump.js patch -a --commit --push --tag"
   },
   "repository": {
     "type": "git",

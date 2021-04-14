@@ -40,18 +40,18 @@ export declare function Effect(eventName: string | string[]): MethodDecorator;
  * @param {Dispatcher} [customDispatcher]
  * @returns {*}
  */
-export declare function Store<InitState extends Object = {}>(initState?: InitState, customDispatcher?: Dispatcher, eventScheme?: EventSchemeType): any;
+export declare function Store<InitState extends object = {}>(initState?: InitState, customDispatcher?: Dispatcher, eventScheme?: EventSchemeType): any;
 /**
  * Gets Actions, Reducers and Effects from metadata and create EventScheme
  * @param store
  * @param eventScheme
  */
-export declare const setupEventsSchemeFromDecorators: <InitState>(store: ProtoStore<InitState, import("./store").HashMap<any>>, eventScheme?: EventSchemeType) => void;
+export declare const setupEventsSchemeFromDecorators: <InitState extends object>(store: ProtoStore<InitState, import("./store").HashMap<any>>, eventScheme?: EventSchemeType) => void;
 /**
  * Setup handling of Reducers, Actions, SideEffects without Decorator,
  * Use it in Constructor if you use Angular Injectable
  */
-export declare const setupStoreEvents: <State, Scheme>(eventScheme?: EventSchemeType) => (newInstance: ProtoStore<State, Scheme>) => ProtoStore<State, Scheme>;
+export declare const setupStoreEvents: <State extends object, Scheme>(eventScheme?: EventSchemeType) => (newInstance: ProtoStore<State, Scheme>) => ProtoStore<State, Scheme>;
 /**
  * Best way to create Store without classes.
  * Just set eventything and get new Store
@@ -62,7 +62,7 @@ export declare const setupStoreEvents: <State, Scheme>(eventScheme?: EventScheme
  *
  * @deprecated - Now you can give EventScheme to Store conctructor
  */
-export declare const createStore: <InitState, SchemeType extends EventSchemeType>(initState?: InitState | undefined, customDispatcher?: Dispatcher | null | undefined, options?: StoreOptions | null | undefined, eventScheme?: Object | SchemeType | undefined) => ProtoStore<InitState, SchemeType>;
+export declare const createStore: <InitState extends object, SchemeType extends EventSchemeType>(initState?: InitState | undefined, customDispatcher?: Dispatcher | null | undefined, options?: StoreOptions | null | undefined, eventScheme?: Object | SchemeType | undefined) => ProtoStore<InitState, SchemeType>;
 /**
  * Function to fix type-checking of SchemeEvents
  * @param scheme Scheme Object

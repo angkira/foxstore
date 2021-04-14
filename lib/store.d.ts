@@ -19,6 +19,7 @@ interface LogOptions {
     reducers?: boolean;
     actions?: boolean;
     effects?: boolean;
+    state?: boolean;
 }
 export interface StoreOptions {
     storeName?: string;
@@ -35,16 +36,16 @@ export declare const DefaultStoreOptions: StoreOptions;
  *
  * @export
  * @class ProtoStore
- * @template InitState - type | interface for state of Store
+ * @template State - type | interface for state of Store
  */
-export declare class ProtoStore<InitState, EventScheme = HashMap<any>> {
+export declare class ProtoStore<State extends object, EventScheme = HashMap<any>> {
     /**
      * Subject that contains
      *
-     * @type {(ReplaySubject<InitState | {}>)}
+     * @type {(ReplaySubject<State | {}>)}
      * @memberof ProtoStore
      */
-    readonly store$: BehaviorSubject<InitState | {}>;
+    readonly store$: BehaviorSubject<State | {}>;
     /**
      * Private event-bus-driver for this Store, to create Event-Namespace
      *
@@ -54,32 +55,32 @@ export declare class ProtoStore<InitState, EventScheme = HashMap<any>> {
     readonly eventDispatcher: Dispatcher;
     options: StoreOptions;
     eventScheme: EventSchemeType;
-    constructor(initState?: InitState, options?: StoreOptions | null, customDispatcher?: Dispatcher | null, extraEventScheme?: EventSchemeType);
+    constructor(initState?: State, options?: StoreOptions | null, customDispatcher?: Dispatcher | null, extraEventScheme?: EventSchemeType);
     /**
      * Selecting stream with data from Store by key.
      *
      * @template K
      * @param {K} [entityName] key of Entity from Store. If empty - returns all the Store.
-     * @returns {Observable<InitState[K]>}
+     * @returns {Observable<State[K]>}
      * @memberof ProtoStore
      */
-    select<K extends keyof InitState>(entityName: K): Observable<InitState[K]>;
+    select<K extends keyof State>(entityName: K): Observable<State[K]>;
     /**
      * Hack to get current value of Store as Object
      *
      * @readonly
-     * @type {InitState}
+     * @type {State}
      * @memberof ProtoStore
      */
-    get snapshot(): InitState;
+    get snapshot(): State;
     /**
      * Patch current value of store by new.
      *
-     * @param {InitState} update
+     * @param {State} update
      * @returns {this}
      * @memberof ProtoStore
      */
-    patch(update: Partial<InitState>): this;
+    patch(update: Partial<State>): this;
     /**
      * Clears the Store state by empty object.
      *
