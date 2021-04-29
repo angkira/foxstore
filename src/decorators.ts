@@ -259,7 +259,8 @@ function reducerMetaHandler<State extends object>(instance: ProtoStore<State>) {
       let result = state;
 
       reducers.forEach(reducer => {
-        result = mergeDeepRight(result, reducer.reducer.call(instance, payload, result));
+        result = mergeDeepRight(result,
+          reducer.reducer.call(instance, payload, result));
   
         instance.options.logOn && instance.options.logger
           && instance.options.logOptions?.reducers
