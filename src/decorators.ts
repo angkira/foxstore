@@ -266,9 +266,9 @@ function reducerMetaHandler<State extends object>(instance: ProtoStore<State>) {
           && instance.options.logOptions?.reducers
           && instance.options.logger(`REDUCER: ${reducer.reducer.name}`);
 
-        instance.patch(result);
       });
 
+      instance.patch(result);
     }
 }
 
