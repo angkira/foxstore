@@ -4,7 +4,7 @@ import { Dispatcher, Event } from './dispatcher';
 import { of, Observable, merge, isObservable, noop, combineLatest } from 'rxjs';
 import 'reflect-metadata';
 
-import { assocPath, keys } from 'ramda';
+import { assocPath, keys, mergeDeepRight } from 'ramda';
 import { IActionOptions, MetaAction, ACTION_METAKEY, ActionFn, ReducerFn, MetaReducer, REDUCER_METAKEY, MetaEffect, EFFECT_METAKEY, EventSchemeType, STORE_DECORATED_METAKEY, MetaType } from './types';
 
 /**
@@ -259,14 +259,14 @@ function reducerMetaHandler<State extends object>(instance: ProtoStore<State>) {
       let result = state;
 
       reducers.forEach(reducer => {
-        Object.assign(result, reducer.reducer.call(instance, payload, result));
-
-        instance.patch(result);
+        result = mergeDeepRight(result, reducer.reducer.call(instance, payload, result));
   
         instance.options.logOn && instance.options.logger
           && instance.options.logOptions?.reducers
           && instance.options.logger(`REDUCER: ${reducer.reducer.name}`);
       });
+
+      instance.patch(result);
     }
 }
 
