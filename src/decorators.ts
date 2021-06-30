@@ -1,5 +1,5 @@
 import { ProtoStore, StoreOptions } from './store';
-import { mergeMap, take, shareReplay, tap, takeUntil, share, skipUntil, pluck } from 'rxjs/operators';
+import { mergeMap, take, shareReplay, tap, takeUntil, share, skipUntil, pluck, switchMap } from 'rxjs/operators';
 import { Dispatcher, Event } from './dispatcher';
 import { of, Observable, merge, isObservable, noop, combineLatest, zip } from 'rxjs';
 import 'reflect-metadata';
@@ -297,17 +297,26 @@ export const setupStoreEvents = <State extends object, Scheme>(eventScheme: Even
  */
 function metaGetEntityPayload<State extends object>({ eventDispatcher, store$ }: ProtoStore<State>):
   (eventName: string, requiredEvents?: string[]) => Observable<[any, State]> {
-  return (eventName: string, requiredEvents?: string[]) => 
-    combineLatest([
-      (requiredEvents?.length ?
-        eventDispatcher
-          .listen(eventName)
-          .pipe(
-            skipUntil(
-              zip(...requiredEvents.map(
-                eventName => eventDispatcher.listen(eventName))
-                ),
-            ))
+  return (eventName: string, requiredEvents?: string[]) => {
+    const requiredEventStreams = requiredEvents?.map(
+      eventName => eventDispatcher.listen(eventName));
+
+    return combineLatest([
+      (requiredEventStreams?.length ?
+        merge(
+          // For first value emitting
+          zip(requiredEventStreams).pipe(
+            take(1),
+            switchMap(() =>
+              eventDispatcher.listen(eventName)),
+          ),
+          // Waiting for Required Events emitted
+          eventDispatcher
+            .listen(eventName)
+            .pipe(
+              skipUntil(
+                zip(...requiredEventStreams)))
+        )
         : eventDispatcher
           .listen(eventName)
       ).pipe(
@@ -322,6 +331,7 @@ function metaGetEntityPayload<State extends object>({ eventDispatcher, store$ }:
           ),
         (store$ as Observable<State>).pipe(take(1)),
       ]);
+    }
 }
 
 /**
