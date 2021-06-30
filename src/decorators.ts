@@ -305,7 +305,7 @@ function metaGetEntityPayload<State extends object>({ eventDispatcher, store$ }:
       (requiredEventStreams?.length ?
         merge(
           // For first value emitting
-          zip(requiredEventStreams).pipe(
+          zip(...requiredEventStreams).pipe(
             take(1),
             switchMap(() =>
               eventDispatcher.listen(eventName)),
