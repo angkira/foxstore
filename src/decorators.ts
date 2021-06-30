@@ -259,7 +259,7 @@ export const setupStoreEvents = <State extends object, Scheme>(eventScheme: Even
               payload: payloadObject
             });
 
-            const { actions, reducers, effects } = eventScheme[eventName];
+            const { actions, reducers, effects } = eventSchemeOfSimpleEvents[eventName];
 
             if (reducers instanceof Array
                 && reducers?.length) {
@@ -275,7 +275,7 @@ export const setupStoreEvents = <State extends object, Scheme>(eventScheme: Even
 
             if (actions instanceof Array
                 && actions?.length) {
-                  actionAsyncHandler(payloadObject, state, actions);
+                  actionAsyncHandler(payloadObject, state, actions as MetaAction[]);
             }
           }),
         ));
