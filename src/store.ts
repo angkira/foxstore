@@ -166,6 +166,11 @@ export class ProtoStore<State extends object, EventScheme = HashMap<any>> {
      * @param payload
      */
     dispatch<Payload = void>(eventName: keyof EventScheme, payload?: Payload): this {
+        this.options.logOn
+            && this.options.logOptions?.events
+            && this.options.logger
+            && this.options.logger(eventName);
+            
         this.eventDispatcher.dispatch(
             new Event(eventName as string, payload));
         return this;
