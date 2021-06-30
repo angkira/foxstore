@@ -1,10 +1,10 @@
 import { ProtoStore, StoreOptions } from './store';
-import { mergeMap, take, shareReplay, tap, takeUntil, share, skipUntil, pluck, switchMap } from 'rxjs/operators';
+import { mergeMap, take, shareReplay, tap, takeUntil, share, skipUntil, pluck, map as rxMap } from 'rxjs/operators';
 import { Dispatcher, Event } from './dispatcher';
 import { of, Observable, merge, isObservable, noop, combineLatest, zip } from 'rxjs';
 import 'reflect-metadata';
 
-import { assocPath, complement, filter, isEmpty, keys, map, mapObjIndexed, prop } from 'ramda';
+import { assocPath, complement, filter, isEmpty, keys, last, map, mapObjIndexed, prop } from 'ramda';
 import { IActionOptions, MetaAction, ACTION_METAKEY, ActionFn, ReducerFn, MetaReducer, REDUCER_METAKEY, MetaEffect, EFFECT_METAKEY, EventSchemeType, STORE_DECORATED_METAKEY, MetaType, EventHandlerOptions, EventConfig } from './types';
 
 /**
@@ -305,11 +305,13 @@ function metaGetEntityPayload<State extends object>({ eventDispatcher, store$ }:
       (requiredEventStreams?.length ?
         merge(
           // For first value emitting
-          zip(...requiredEventStreams).pipe(
+          zip(
+            ...requiredEventStreams,
+            eventDispatcher.listen(eventName),
+            ).pipe(
             take(1),
-            switchMap(() =>
-              eventDispatcher.listen(eventName)),
-          ),
+            rxMap(last),
+          ) as Observable<Event>,
           // Waiting for Required Events emitted
           eventDispatcher
             .listen(eventName)
