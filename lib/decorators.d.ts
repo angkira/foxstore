@@ -1,7 +1,7 @@
 import { ProtoStore, StoreOptions } from './store';
 import { Dispatcher } from './dispatcher';
 import 'reflect-metadata';
-import { IActionOptions, EventSchemeType } from './types';
+import { IActionOptions, EventSchemeType, EventHandlerOptions } from './types';
 /**
  * Action MethodDecorator for Store class, works by metadata of constructor.
  *
@@ -18,10 +18,7 @@ export declare function Action(eventName: string | string[], options?: IActionOp
  * @param {string} eventName
  * @returns {MethodDecorator}
  */
-/**
- *
- */
-export declare function Reducer(eventName: string | string[]): MethodDecorator;
+export declare function Reducer(eventName: string | string[], options?: EventHandlerOptions): MethodDecorator;
 /**
  * Effect MethodDecorator for Store class, works by metadata of constructor.
  *
@@ -29,7 +26,7 @@ export declare function Reducer(eventName: string | string[]): MethodDecorator;
  * @param {string} eventName
  * @returns {MethodDecorator}
  */
-export declare function Effect(eventName: string | string[]): MethodDecorator;
+export declare function Effect(eventName: string | string[], options?: EventHandlerOptions): MethodDecorator;
 /**
  * Store decorator. Can be used for Injectable services like in Angular
  * Waiting for Decorators will became not "experimental" to work with types correctly.

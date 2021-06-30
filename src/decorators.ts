@@ -1,11 +1,11 @@
 import { ProtoStore, StoreOptions } from './store';
-import { withLatestFrom, mergeMap, take, shareReplay, tap, takeUntil, share } from 'rxjs/operators';
+import { mergeMap, take, shareReplay, tap, takeUntil, share, skipUntil, pluck } from 'rxjs/operators';
 import { Dispatcher, Event } from './dispatcher';
-import { of, Observable, merge, isObservable, noop, combineLatest } from 'rxjs';
+import { of, Observable, merge, isObservable, noop, combineLatest, zip } from 'rxjs';
 import 'reflect-metadata';
 
-import { assocPath, keys, mergeDeepRight } from 'ramda';
-import { IActionOptions, MetaAction, ACTION_METAKEY, ActionFn, ReducerFn, MetaReducer, REDUCER_METAKEY, MetaEffect, EFFECT_METAKEY, EventSchemeType, STORE_DECORATED_METAKEY, MetaType } from './types';
+import { assocPath, complement, filter, isEmpty, keys, map, mapObjIndexed, prop } from 'ramda';
+import { IActionOptions, MetaAction, ACTION_METAKEY, ActionFn, ReducerFn, MetaReducer, REDUCER_METAKEY, MetaEffect, EFFECT_METAKEY, EventSchemeType, STORE_DECORATED_METAKEY, MetaType, EventHandlerOptions, EventConfig } from './types';
 
 /**
  * Action MethodDecorator for Store class, works by metadata of constructor.
@@ -15,9 +15,18 @@ import { IActionOptions, MetaAction, ACTION_METAKEY, ActionFn, ReducerFn, MetaRe
  * @param {IActionOptions} [options]
  * @returns {MethodDecorator}
  */
-export function Action(eventName: string | string[], options?: IActionOptions, outputEventName?: string): MethodDecorator {
-  return function (store: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) {
+export function Action(
+  eventName: string | string[],
+  options?: IActionOptions,
+  outputEventName?: string,
+  ): MethodDecorator {
+  return function (
+    store: any,
+    propertyKey: string | symbol,
+    descriptor: PropertyDescriptor,
+    ) {
     const actions: MetaAction[] = Reflect.getMetadata(ACTION_METAKEY, store.constructor) || [];
+
     const action = descriptor.value as ActionFn;
 
     if (options?.writeAs) {
@@ -33,9 +42,8 @@ export function Action(eventName: string | string[], options?: IActionOptions, o
 
     if (typeof eventName === 'string') {
       actions.push(new MetaAction(eventName, action, options));
-    } else if (eventName?.length) {
-      eventName.forEach(event =>
-        actions.push(new MetaAction(event, action, options)))
+    } else if (eventName instanceof Array) {
+        actions.push(...eventName.map(event => new MetaAction(event, action, options)));
     }
     
     Reflect.defineMetadata(ACTION_METAKEY, actions, store.constructor);
@@ -49,20 +57,19 @@ export function Action(eventName: string | string[], options?: IActionOptions, o
  * @param {string} eventName
  * @returns {MethodDecorator}
  */
-
-/**
- *
- */
-export function Reducer(eventName: string | string[]): MethodDecorator {
+export function Reducer(
+  eventName: string | string[],
+  options?: EventHandlerOptions,
+  ): MethodDecorator {
   return function (store: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) {
     const reducer: ReducerFn = descriptor.value;
     const reducers: MetaReducer[] = Reflect.getMetadata(REDUCER_METAKEY, store.constructor) || [];
 
     if (typeof eventName === 'string') {
-      reducers.push(new MetaReducer(eventName, reducer));
+      reducers.push(new MetaReducer(eventName, reducer, options));
     } else if (eventName?.length) {
       eventName.forEach(event =>
-        reducers.push(new MetaReducer(event, reducer)))
+        reducers.push(new MetaReducer(event, reducer, options)))
     }
 
     Reflect.defineMetadata(REDUCER_METAKEY, reducers, store.constructor);
@@ -76,16 +83,19 @@ export function Reducer(eventName: string | string[]): MethodDecorator {
  * @param {string} eventName
  * @returns {MethodDecorator}
  */
-export function Effect(eventName: string | string[]): MethodDecorator {
+export function Effect(
+  eventName: string | string[],
+  options?: EventHandlerOptions,
+  ): MethodDecorator {
   return function (store: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) {
     const effect = descriptor.value;
     const effects: MetaEffect[] = Reflect.getMetadata(EFFECT_METAKEY, store.constructor) || [];
 
     if (typeof eventName === 'string') {
-      effects.push(new MetaEffect(eventName, effect));
+      effects.push(new MetaEffect(eventName, effect, options));
     } else if (eventName?.length) {
       eventName.forEach(event =>
-        effects.push(new MetaEffect(event, effect)))
+        effects.push(new MetaEffect(event, effect, options)))
     }
     
     Reflect.defineMetadata(EFFECT_METAKEY, effects, store.constructor);
@@ -182,7 +192,61 @@ export const setupStoreEvents = <State extends object, Scheme>(eventScheme: Even
 
     const actionHandler = actionMetaHandler(newInstance);
 
-    const payloadStreams = (keys(eventScheme) as string[])
+    const actionAsyncHandler = (
+      payloadObject: Observable<unknown> | unknown,
+      state: State,
+      actions: MetaAction[],
+      ) => isObservable(payloadObject) ?
+        payloadObject
+          .pipe(take(1))
+          .subscribe(payload =>
+            actionHandler(payload, state)
+              (actions as MetaAction[]))
+        : actionHandler(payloadObject, state)
+            (actions as MetaAction[])
+
+    const isEventHasRequiredEvents = (entity: MetaType) => !!entity.options?.requiredEvents;
+
+    const isEventHasNotRequiredEvents = complement(isEventHasRequiredEvents);
+
+    const eventSchemeOfSimpleEvents = mapObjIndexed(mapObjIndexed(filter(isEventHasNotRequiredEvents)))(eventScheme);
+
+    const eventSchemeOfRequiredEvents = mapObjIndexed(mapObjIndexed(filter(isEventHasRequiredEvents)))(eventScheme);    
+
+    const streamsWithRequiredEvents = Object.entries(eventSchemeOfRequiredEvents)
+      .map(([eventName, eventConfig]: [string, EventConfig]) =>
+        mapObjIndexed(
+          map(
+          (entity: MetaType) => [
+            metaGetEntityPayload(newInstance)(
+              eventName,
+              entity.options?.requiredEvents?.eventNames
+              ),
+              entity,
+            ])
+          )(eventConfig) as Record<
+            keyof EventConfig,
+            [Observable<[any, State]>, MetaType][]
+          >)
+      .flatMap(({ actions, reducers, effects }) => [
+            ...(actions || []).map(
+                ([payload$, action]: [Observable<[any, State]>, MetaType]) => 
+                  payload$.pipe(
+                    tap(payload => actionAsyncHandler(...payload, [action as MetaAction])))),
+            ...(reducers || []).map(
+              ([payload$, reducer]: [Observable<[any, State]>, MetaType]) => 
+                payload$.pipe(
+                  tap(payload => reducerHandler(...payload)([reducer as MetaReducer])))),
+            ...(effects || []).map(
+              ([payload$, effect]: [Observable<[any, State]>, MetaType]) => 
+                payload$.pipe(
+                  tap(payload => effectHandler(...payload)([effect as MetaEffect])))),
+          ]);
+   
+    const payloadStreams = (keys(eventSchemeOfSimpleEvents) as string[])
+      .filter(eventName =>
+        Object.values(eventSchemeOfSimpleEvents[eventName])
+          .some(complement(isEmpty)))
       .map((eventName: string) =>
         metaGetEntityPayload(newInstance)(eventName).pipe(
           tap(([payloadObject, state]) => {
@@ -195,28 +259,30 @@ export const setupStoreEvents = <State extends object, Scheme>(eventScheme: Even
               payload: payloadObject
             });
 
-            if (eventScheme[eventName].reducers instanceof Array
-                && eventScheme[eventName].reducers?.length) {
-              reducerHandler(payloadObject, state)(eventScheme[eventName].reducers as MetaReducer[]);
+            const { actions, reducers, effects } = eventScheme[eventName];
+
+            if (reducers instanceof Array
+                && reducers?.length) {
+                reducerHandler(payloadObject, state)
+                  (reducers as MetaReducer[]);
             }
 
-            if (eventScheme[eventName].effects instanceof Array
-                && eventScheme[eventName].effects?.length) {
-              effectHandler(payloadObject, state)(eventScheme[eventName].effects as MetaEffect[]);
+            if (effects instanceof Array
+                && effects?.length) {
+                  effectHandler(payloadObject, state)
+                    (effects as MetaEffect[]);
             }
 
-            if (eventScheme[eventName].actions instanceof Array
-                && eventScheme[eventName].actions?.length) {
-              isObservable(payloadObject) ?
-                payloadObject.pipe(take(1)).subscribe(payload =>
-                  actionHandler(payload, state)(eventScheme[eventName].actions as MetaAction[]))
-                : actionHandler(payloadObject, state)(eventScheme[eventName].actions as MetaAction[]);
+            if (actions instanceof Array
+                && actions?.length) {
+                  actionAsyncHandler(payloadObject, state, actions);
             }
           }),
         ));
 
     merge(
-      ...payloadStreams
+      ...payloadStreams,
+      ...streamsWithRequiredEvents,
     ).pipe(
       takeUntil(newInstance.eventDispatcher.destroy$),
     ).subscribe();
@@ -230,12 +296,21 @@ export const setupStoreEvents = <State extends object, Scheme>(eventScheme: Even
  * @param instance - Store instance
  */
 function metaGetEntityPayload<State extends object>({ eventDispatcher, store$ }: ProtoStore<State>):
-  (eventName: string) => Observable<[any, State]> {
-  return (eventName: string) =>
+  (eventName: string, requiredEvents?: string[]) => Observable<[any, State]> {
+  return (eventName: string, requiredEvents?: string[]) => 
     combineLatest([
-      eventDispatcher
-        .listen(eventName)
-        .pipe(
+      (requiredEvents?.length ?
+        eventDispatcher
+          .listen(eventName)
+          .pipe(
+            skipUntil(
+              zip(...requiredEvents.map(
+                eventName => eventDispatcher.listen(eventName))
+                ),
+            ))
+        : eventDispatcher
+          .listen(eventName)
+      ).pipe(
           shareReplay(1),
           mergeMap((event: Event) =>
             (event.async ?
@@ -303,15 +378,6 @@ function actionMetaHandler<State extends object>(instance: ProtoStore<State>) {
         instance.options.logOn && instance.options.logger
           && instance.options.logOptions?.actions
           && instance.options.logger(`ACTION: ${action.action.name}`);
-
-        // TODO: Add writeAs support
-        // instance.patch(
-        //   simplyReducer(action.options?.writeAs)
-        //     .call(
-        //       instance,
-        //       result.payload,
-        //       state
-        //     ));
       });
 }
 
