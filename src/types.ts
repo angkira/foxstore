@@ -1,12 +1,22 @@
 import { Event } from './dispatcher';
+
 export const REDUCER_METAKEY = '@StoreReducers';
+
 export const ACTION_METAKEY = '@StoreActions';
+
 export const EFFECT_METAKEY = '@StoreEffects';
+
 export const STORE_DECORATED_METAKEY = '@Store';
-export type ActionFn<Payload = any> = (payload: Payload, state?: any) => Event;
-export type ReducerFn<Payload = any> = (payload: Payload, state?: any) => typeof state;
-export type EffectFn<Payload = any> = (payload: Payload, state?: any) => void;
-export const simplyReducer: ReducerFn = (fieldName: string) => (payload: any) => ({ [fieldName]: payload });
+
+export type ActionFn<Payload = unknown> = <State extends Record<string, unknown>>(payload: Payload, state?: State) => Event;
+
+export type ReducerFn<Payload = unknown> = <State extends Record<string, unknown>>(payload: Payload, state?: State) => State;
+
+export type EffectFn<Payload = unknown> = <State extends Record<string, unknown>>(payload: Payload, state?: State) => void;
+
+export const simplyReducer = (fieldName: string): ReducerFn =>
+    // @ts-ignore
+    (payload: unknown): Record<string, unknown> => ({ [fieldName]: payload });
 
 /**
  * Common Event-handlers options

@@ -1,4 +1,4 @@
-import { ReplaySubject, Observable, SchedulerLike, queueScheduler } from 'rxjs';
+import { Observable, queueScheduler, ReplaySubject, SchedulerLike } from 'rxjs';
 import { filter, observeOn, shareReplay, takeWhile } from 'rxjs/operators';
 
 /**

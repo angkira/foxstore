@@ -1,11 +1,28 @@
-import { ProtoStore, StoreOptions } from './store';
-import { mergeMap, take, shareReplay, tap, takeUntil, share, skipUntil, pluck, map as rxMap } from 'rxjs/operators';
-import { Dispatcher, Event } from './dispatcher';
-import { of, Observable, merge, isObservable, noop, combineLatest, zip } from 'rxjs';
 import 'reflect-metadata';
 
-import { assocPath, complement, filter, isEmpty, keys, last, map, mapObjIndexed, prop } from 'ramda';
-import { IActionOptions, MetaAction, ACTION_METAKEY, ActionFn, ReducerFn, MetaReducer, REDUCER_METAKEY, MetaEffect, EFFECT_METAKEY, EventSchemeType, STORE_DECORATED_METAKEY, MetaType, EventHandlerOptions, EventConfig } from './types';
+import { assocPath, complement, filter, isEmpty, keys, last, map, mapObjIndexed } from 'ramda';
+import { combineLatest, from, isObservable, merge, noop, Observable, of, zip } from 'rxjs';
+import { map as rxMap, mergeMap, share, shareReplay, skipUntil, take, takeUntil, tap } from 'rxjs/operators';
+
+import { Dispatcher, Event } from './dispatcher';
+import { handleStreamOnce } from './helpers';
+import { ProtoStore, StoreOptions } from './store';
+import {
+  ACTION_METAKEY,
+  ActionFn,
+  EFFECT_METAKEY,
+  EventConfig,
+  EventHandlerOptions,
+  EventSchemeType,
+  IActionOptions,
+  MetaAction,
+  MetaEffect,
+  MetaReducer,
+  MetaType,
+  REDUCER_METAKEY,
+  ReducerFn,
+  STORE_DECORATED_METAKEY,
+} from './types';
 
 /**
  * Action MethodDecorator for Store class, works by metadata of constructor.
@@ -113,7 +130,7 @@ export function Effect(
  * @param {Dispatcher} [customDispatcher]
  * @returns {*}
  */
-export function Store<InitState extends object = {}>(
+export function Store<InitState extends Record<string, unknown> = {}>(
   initState: InitState = Object(),
   customDispatcher?: Dispatcher,
   eventScheme: EventSchemeType = {},
@@ -156,7 +173,7 @@ export function Store<InitState extends object = {}>(
  * @param store
  * @param eventScheme
  */
-export const setupEventsSchemeFromDecorators = <InitState extends object>(store: ProtoStore<InitState>, eventScheme: EventSchemeType = {}) => {
+export const setupEventsSchemeFromDecorators = <InitState extends Record<string, unknown>>(store: ProtoStore<InitState>, eventScheme: EventSchemeType = {}) => {
   const effects: MetaEffect[] = Reflect.getMetadata(EFFECT_METAKEY, store.constructor)
     || [];
   const reducers: MetaReducer[] = Reflect.getMetadata(REDUCER_METAKEY, store.constructor)
@@ -184,7 +201,7 @@ export const setupEventsSchemeFromDecorators = <InitState extends object>(store:
  * Setup handling of Reducers, Actions, SideEffects without Decorator,
  * Use it in Constructor if you use Angular Injectable
  */
-export const setupStoreEvents = <State extends object, Scheme>(eventScheme: EventSchemeType = {}) =>
+export const setupStoreEvents = <State extends Record<string, unknown>, Scheme>(eventScheme: EventSchemeType = {}) =>
   (newInstance: ProtoStore<State, Scheme>) => {
     const reducerHandler = reducerMetaHandler(newInstance);
 
@@ -196,14 +213,23 @@ export const setupStoreEvents = <State extends object, Scheme>(eventScheme: Even
       payloadObject: Observable<unknown> | unknown,
       state: State,
       actions: MetaAction[],
-      ) => isObservable(payloadObject) ?
-        payloadObject
-          .pipe(take(1))
-          .subscribe(payload =>
-            actionHandler(payload, state)
-              (actions as MetaAction[]))
-        : actionHandler(payloadObject, state)
-            (actions as MetaAction[])
+    ) => {
+      const applyAction = handleStreamOnce({
+        next: <T>(payload: T) => actionHandler(payload, state)(actions as MetaAction[])
+        });
+      
+      if (isObservable(payloadObject)) {
+        applyAction(payloadObject);
+        return;
+      }
+
+      if (payloadObject instanceof Promise){
+        applyAction(from(payloadObject));
+        return;
+      }
+
+      actionHandler(payloadObject, state)(actions as MetaAction[]);
+    }
 
     const isEventHasRequiredEvents = (entity: MetaType) => !!entity.options?.requiredEvents;
 
@@ -232,15 +258,18 @@ export const setupStoreEvents = <State extends object, Scheme>(eventScheme: Even
             ...(actions || []).map(
                 ([payload$, action]: [Observable<[any, State]>, MetaType]) => 
                   payload$.pipe(
-                    tap(payload => actionAsyncHandler(...payload, [action as MetaAction])))),
+                    tap(payload => actionAsyncHandler(...payload, [action as MetaAction])))
+            ),
             ...(reducers || []).map(
               ([payload$, reducer]: [Observable<[any, State]>, MetaType]) => 
                 payload$.pipe(
-                  tap(payload => reducerHandler(...payload)([reducer as MetaReducer])))),
+                  tap(payload => reducerHandler(...payload)([reducer as MetaReducer])))
+            ),
             ...(effects || []).map(
               ([payload$, effect]: [Observable<[any, State]>, MetaType]) => 
                 payload$.pipe(
-                  tap(payload => effectHandler(...payload)([effect as MetaEffect])))),
+                  tap(payload => effectHandler(...payload)([effect as MetaEffect])))
+            ),
           ]);
    
     const payloadStreams = (keys(eventSchemeOfSimpleEvents) as string[])
@@ -295,11 +324,13 @@ export const setupStoreEvents = <State extends object, Scheme>(eventScheme: Even
  * Get event payload
  * @param instance - Store instance
  */
-function metaGetEntityPayload<State extends object>({ eventDispatcher, store$ }: ProtoStore<State>):
+function metaGetEntityPayload<State extends Record<string, unknown>>({ eventDispatcher, store$ }: ProtoStore<State>):
   (eventName: string, requiredEvents?: string[]) => Observable<[any, State]> {
+  
   return (eventName: string, requiredEvents?: string[]) => {
     const requiredEventStreams = requiredEvents?.map(
-      eventName => eventDispatcher.listen(eventName));
+      eventName => eventDispatcher.listen(eventName),
+    );
 
     return combineLatest([
       (requiredEventStreams?.length ?
@@ -340,7 +371,7 @@ function metaGetEntityPayload<State extends object>({ eventDispatcher, store$ }:
  * Handler for reducer
  * @param instance
  */
-function reducerMetaHandler<State extends object>(instance: ProtoStore<State>) {
+function reducerMetaHandler<State extends Record<string, unknown>>(instance: ProtoStore<State>) {
   return (payload: unknown, state: State) =>
     (reducers: MetaReducer[]) => {
       let result = state;
@@ -349,9 +380,9 @@ function reducerMetaHandler<State extends object>(instance: ProtoStore<State>) {
         result = Object.assign(result,
           reducer.reducer.call(instance, payload, result));
   
-        instance.options.logOn && instance.options.logger
+        instance.options.logOn
           && instance.options.logOptions?.reducers
-          && instance.options.logger(`REDUCER: ${reducer.reducer.name}`);
+          && instance.options.logger?.(`REDUCER: ${reducer.reducer.name}`);
 
       });
 
@@ -363,15 +394,15 @@ function reducerMetaHandler<State extends object>(instance: ProtoStore<State>) {
  * Handler for Effect
  * @param instance
  */
-function effectMetaHandler<State extends object>(instance: ProtoStore<State>) {
+function effectMetaHandler<State extends Record<string, unknown>>(instance: ProtoStore<State>) {
   return (payload: unknown, state: State) =>
     (effects: MetaEffect[]) =>
       effects.forEach(effect => {
         effect.effect.call(instance, payload, state);
 
-        instance.options.logOn && instance.options.logger
+        instance.options.logOn
           && instance.options.logOptions?.effects
-          && instance.options.logger(`EFFECT: ${effect.effect.name}`);
+          && instance.options.logger?.(`EFFECT: ${effect.effect.name}`);
       });
         
 }
@@ -380,16 +411,16 @@ function effectMetaHandler<State extends object>(instance: ProtoStore<State>) {
  * Handler for Action
  * @param instance
  */
-function actionMetaHandler<State extends object>(instance: ProtoStore<State>) {
+function actionMetaHandler<State extends Record<string, unknown>>(instance: ProtoStore<State>) {
   return (payload: unknown, state: State) =>
     (actions: MetaAction[]) =>
       actions.forEach(action => {
         const result = action.action.call(instance, payload, state) as Event;
         instance.eventDispatcher.dispatch(result);
 
-        instance.options.logOn && instance.options.logger
+        instance.options.logOn
           && instance.options.logOptions?.actions
-          && instance.options.logger(`ACTION: ${action.action.name}`);
+          && instance.options.logger?.(`ACTION: ${action.action.name}`);
       });
 }
 
@@ -403,7 +434,7 @@ function actionMetaHandler<State extends object>(instance: ProtoStore<State>) {
  *
  * @deprecated - Now you can give EventScheme to Store conctructor
  */
-export const createStore = <InitState extends object,
+export const createStore = <InitState extends Record<string, unknown>,
   SchemeType extends EventSchemeType>(
     initState?: InitState,
     customDispatcher?: Dispatcher | null,
