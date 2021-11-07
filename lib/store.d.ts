@@ -2,35 +2,7 @@ import { Observable, BehaviorSubject } from 'rxjs';
 import { Dispatcher } from './dispatcher';
 import { EventSchemeType } from "./types";
 import 'reflect-metadata';
-export declare type HashMap<T> = {
-    [key: string]: T;
-};
-/**
- * Curried function-helper to convert collection to hashMap by choosen key
- *
- * @export
- * @template T
- * @param {string} key
- * @returns
- */
-export declare function toHashMap<T>(key: string): (list: T[]) => HashMap<T>;
-interface LogOptions {
-    events?: boolean;
-    reducers?: boolean;
-    actions?: boolean;
-    effects?: boolean;
-    state?: boolean;
-}
-export interface StoreOptions {
-    storeName?: string;
-    logger?: (...args: unknown[]) => void;
-    logOn?: boolean;
-    logOptions?: LogOptions;
-    needHashMap?: boolean;
-    HashMapKey?: string;
-    HashMapFn?: (...args: any[]) => string | number | Symbol;
-}
-export declare const DefaultStoreOptions: StoreOptions;
+import { StoreOptions } from './options';
 /**
  * Parent class that contains all basic methods of Store
  *
@@ -38,7 +10,11 @@ export declare const DefaultStoreOptions: StoreOptions;
  * @class ProtoStore
  * @template State - type | interface for state of Store
  */
-export declare class ProtoStore<State extends object, EventScheme = HashMap<any>> {
+export declare class ProtoStore<State extends Record<string, any>, EventScheme extends EventSchemeType> {
+    private initState?;
+    eventScheme?: EventScheme | undefined;
+    options: StoreOptions;
+    readonly eventDispatcher: Dispatcher;
     /**
      * Subject that contains
      *
@@ -46,16 +22,7 @@ export declare class ProtoStore<State extends object, EventScheme = HashMap<any>
      * @memberof ProtoStore
      */
     readonly store$: BehaviorSubject<State | {}>;
-    /**
-     * Private event-bus-driver for this Store, to create Event-Namespace
-     *
-     * @type {Dispatcher}
-     * @memberof ProtoStore
-     */
-    readonly eventDispatcher: Dispatcher;
-    options: StoreOptions;
-    eventScheme: EventSchemeType;
-    constructor(initState?: State, options?: StoreOptions | null, customDispatcher?: Dispatcher | null, extraEventScheme?: EventSchemeType);
+    constructor(initState?: State | undefined, eventScheme?: EventScheme | undefined, options?: StoreOptions, eventDispatcher?: Dispatcher);
     /**
      * Selecting stream with data from Store by key.
      *
@@ -88,11 +55,17 @@ export declare class ProtoStore<State extends object, EventScheme = HashMap<any>
      */
     clear(): this;
     /**
+     * Resets the Store state by init state.
+     *
+     * @memberof ProtoStore
+     */
+    reset(): this;
+    /**
      * Ethernal method to dispatch Store Event
      * @param eventName
      * @param payload
      */
-    dispatch<Payload = void>(eventName: keyof EventScheme, payload?: Payload): this;
+    dispatch<EventName extends keyof EventScheme, Payload extends EventScheme[EventName]['payload']>(eventName: EventName, payload?: Payload): this;
     /**
      * This method lets to work with events dynamically
      *
@@ -114,4 +87,3 @@ export declare class ProtoStore<State extends object, EventScheme = HashMap<any>
      */
     destroy(): void;
 }
-export {};

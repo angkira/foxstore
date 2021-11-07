@@ -16,7 +16,7 @@ export interface StoreOptions {
     storeName: string;
     needHashMap: boolean;
     HashMapKey?: string;
-    HashMapFn?: (...args: any[]) => string | number | Symbol;
+    HashMapFn?: (...args: any[]) => string | number | symbol;
 }
 /**
  * Parent class that contains all basic methods of Store

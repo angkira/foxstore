@@ -1,6 +1,6 @@
 {
   "name": "foxstore",
-  "version": "2.9.22",
+  "version": "3.0.0",
   "description": "Reactive Event-Driven Storage for WebApplications based on RxJs (reactive extensions)",
   "main": "lib/index",
   "keywords": [
@@ -26,6 +26,7 @@
   "license": "ISC",
   "dependencies": {
     "@types/ramda": "^0.27.39",
+    "eslint-config-airbnb": "^18.2.1",
     "ramda": "^0.27.1",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.4.0",

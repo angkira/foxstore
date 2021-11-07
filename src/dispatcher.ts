@@ -7,10 +7,10 @@ import { filter, observeOn, shareReplay, takeWhile } from 'rxjs/operators';
  * @export
  * @class Event
  */
-export class Event {
+export class Event<Payload = unknown> {
     constructor(
-        public name: string | Symbol,
-        public payload?: any | Observable<any>,
+        public name: string | symbol,
+        public payload?: Payload | Observable<Payload> | Promise<Payload>,
         public async: boolean = false,
     ) { }
 }
@@ -37,7 +37,7 @@ export class Dispatcher {
         this.eventBus$.next(event);
     }
 
-    listen(eventName: string | Symbol): Observable<Event> {
+    listen(eventName: string | symbol): Observable<Event> {
         return this.eventBus$
             .pipe(
                 observeOn(this.scheduler),

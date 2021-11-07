@@ -1,54 +1,11 @@
 import { Observable, BehaviorSubject, pipe } from 'rxjs';
 import { map as rxMap, takeUntil, shareReplay, take, map, distinctUntilChanged} from 'rxjs/operators';
-import { identity, mergeDeepRight, path } from 'ramda';
+import { identity, indexBy, mergeDeepRight, path, prop } from 'ramda';
 import { Dispatcher, Event } from './dispatcher';
-import { setupStoreEvents, setupEventsSchemeFromDecorators } from './decorators';
+import { setupStoreEvents, setupEventsSchemeFromDecorators } from "./setup";
 import { EventSchemeType, STORE_DECORATED_METAKEY } from "./types";
 import 'reflect-metadata';
-
-export type HashMap<T> = {[key: string]: T}
-/**
- * Curried function-helper to convert collection to hashMap by choosen key
- *
- * @export
- * @template T
- * @param {string} key
- * @returns
- */
-export function toHashMap<T>(key: string): (list: T[]) => HashMap<T> {
-    return (list: T[]) =>
-        list.reduce((
-            acc: HashMap<T>,
-            item: any) =>
-                acc[item[key]] = item, {});
-}
-
-interface LogOptions {
-    events?: boolean;
-    reducers?: boolean;
-    actions?: boolean;
-    effects?: boolean;
-    state?: boolean;
-}
-
-export interface StoreOptions {
-    storeName?: string;
-    logger?: (...args: unknown[]) => void;    
-    logOn?: boolean;
-    logOptions?: LogOptions;
-    needHashMap?: boolean;
-    HashMapKey?: string;
-    HashMapFn?: (...args: any[]) => string | number | Symbol; // In the Future
-}
-
-export const DefaultStoreOptions: StoreOptions = {
-    needHashMap: true,
-    logOn: false,
-    logger: console.log,
-    logOptions: {
-        events: true,
-    },
-}
+import { StoreOptions, DefaultStoreOptions } from './options';
 
 /**
  * Parent class that contains all basic methods of Store
@@ -57,7 +14,9 @@ export const DefaultStoreOptions: StoreOptions = {
  * @class ProtoStore
  * @template State - type | interface for state of Store
  */
-export class ProtoStore<State extends object, EventScheme = HashMap<any>> {
+export class ProtoStore<
+    State extends Record<string, any>,
+    EventScheme extends EventSchemeType> {
     /**
      * Subject that contains
      *
@@ -65,34 +24,22 @@ export class ProtoStore<State extends object, EventScheme = HashMap<any>> {
      * @memberof ProtoStore
      */
     readonly store$: BehaviorSubject<State | {}> = new BehaviorSubject<State | {}>({});
-    /**
-     * Private event-bus-driver for this Store, to create Event-Namespace
-     *
-     * @type {Dispatcher}
-     * @memberof ProtoStore
-     */
-    readonly eventDispatcher: Dispatcher;
-
-    public options: StoreOptions;
-    public eventScheme: EventSchemeType = {};
 
     constructor(
-        initState?: State,
-        options: StoreOptions | null = DefaultStoreOptions,
-        customDispatcher?: Dispatcher | null,
-        extraEventScheme?: EventSchemeType,
+        private initState?: State,
+        public eventScheme?: EventScheme,
+        public options: StoreOptions = DefaultStoreOptions, 
+        public readonly eventDispatcher: Dispatcher =
+            new Dispatcher(new Event('storeInit', initState)),
         ) {
             initState && this.patch(initState);
 
             this.options = Object.assign({}, DefaultStoreOptions, options);
 
-            this.eventDispatcher = customDispatcher
-                || new Dispatcher(new Event('storeInit'));
-
             !Reflect.getMetadata(STORE_DECORATED_METAKEY, this.constructor) &&
-                setupEventsSchemeFromDecorators(this, extraEventScheme);
-
-            setupStoreEvents<State, EventScheme>(this.eventScheme)(this);
+                setupEventsSchemeFromDecorators(this, eventScheme || {});
+        
+            eventScheme && setupStoreEvents(eventScheme)(this);
     }
     /**
      * Selecting stream with data from Store by key.
@@ -135,15 +82,17 @@ export class ProtoStore<State extends object, EventScheme = HashMap<any>> {
             mergeDeepRight<State, Partial<State>>(
                 this.snapshot, update
             ),
-            this.options?.needHashMap ?
+            this.options?.hashMap?.on ?
                 this.getHashMap(update) : {});
+
         this.store$.next(
                 patchedState);
 
-        this.options?.logOn
-            && this.options.logOptions?.state
-            && this.options.logger
-            && this.options.logger(`${
+        const logOptions = this.options?.logOptions;
+
+        logOptions?.logOn
+            && logOptions?.state
+            && logOptions?.logger?.(`${
                 this.options?.storeName || this['constructor'].name
             } | State updated: `, patchedState)
 
@@ -161,15 +110,28 @@ export class ProtoStore<State extends object, EventScheme = HashMap<any>> {
     }
 
     /**
+     * Resets the Store state by init state.
+     *
+     * @memberof ProtoStore
+     */
+    reset(): this {
+        this.store$.next(this.initState || {});
+        return this;
+    }
+
+    /**
      * Ethernal method to dispatch Store Event
      * @param eventName
      * @param payload
      */
-    dispatch<Payload = void>(eventName: keyof EventScheme, payload?: Payload): this {
-        this.options.logOn
+    dispatch<EventName extends keyof EventScheme,
+        Payload extends EventScheme[EventName]['payload']>(
+            eventName: EventName,
+            payload?: Payload,
+    ): this {
+        this.options.logOptions?.logOn
             && this.options.logOptions?.events
-            && this.options.logger
-            && this.options.logger(eventName);
+            && this.options.logOptions?.logger?.(eventName);
             
         this.eventDispatcher.dispatch(
             new Event(eventName as string, payload));
@@ -189,6 +151,7 @@ export class ProtoStore<State extends object, EventScheme = HashMap<any>> {
             .listen(eventName)
             .pipe((options.once ? take(1) : map(identity)))
             .subscribe((event: Event) => callbackFn(event.payload));
+        
         return this;
     }
 
@@ -196,24 +159,28 @@ export class ProtoStore<State extends object, EventScheme = HashMap<any>> {
      * For every list-entity in state returnes HashMap for easier using
      *
      */
-    private getHashMap(value: Partial<State>): HashMap<any> {
-        if (!this.options || !this.options.HashMapKey) {
-            return {};
-        } else {
-            return  Object.keys(value)
-                    //@ts-ignore
-                .filter((key: string) => Array.isArray(this.snapshot[key]))
-                .map((entityKey: string) => ({
-                        name: entityKey,
-                        //@ts-ignore
-                        value: toHashMap(this.options.HashMapKey)(this.snapshot[entityKey]),
+    private getHashMap(value: Partial<State>):  Record<string, any> {
+        if (this.options?.hashMap?.on) {
+            return Object
+                .keys(value)
+                .filter((key: keyof State) => Array.isArray(this.snapshot[key]))
+                .map((entityKey: keyof State) => ({
+                    name: entityKey,
+                    // @ts-ignore
+                    value: indexBy(
+                    // @ts-ignore
+                        prop(this.options.hashMap.HashMapKey || 'id'),
+                    )(this.snapshot[entityKey]),
                     }))
-                .reduce((mapObject: HashMap<any>, entity: {name: string, value: HashMap<any>}) => {
-                    return mapObject[`${entity.name}_Map`] = entity.value;
+                .reduce((
+                    mapObject: Record<string, any>,
+                    entity: { name: keyof State, value: Record<string, any> }) => {
+                        mapObject[`${entity.name}_Map`] = entity.value;
+                        return mapObject;
                 }, {});
+        } else {
+            return {};
         }
-
-
     }
 
     /**

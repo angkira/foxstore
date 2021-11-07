@@ -1,15 +1,15 @@
-import { Observable } from 'rxjs';
+import { Observable, SchedulerLike } from 'rxjs';
 /**
  * Atomaric data-unit, that may contain info
  *
  * @export
  * @class Event
  */
-export declare class Event {
-    name: string;
-    payload?: any;
+export declare class Event<Payload = unknown> {
+    name: string | symbol;
+    payload?: Payload | Observable<Payload> | Promise<Payload> | undefined;
     async: boolean;
-    constructor(name: string, payload?: any, async?: boolean);
+    constructor(name: string | symbol, payload?: Payload | Observable<Payload> | Promise<Payload> | undefined, async?: boolean);
 }
 /**
  * Simple Event-manager
@@ -18,12 +18,12 @@ export declare class Event {
  * @class Dispatcher
  */
 export declare class Dispatcher {
+    private scheduler;
     private eventBus$;
-    private eventScope;
-    constructor(initEvent?: Event);
     private readonly destroyEvent;
+    constructor(initEvent?: Event, scheduler?: SchedulerLike);
     dispatch(event: Event): void;
-    listen(eventName: string): Observable<Event>;
+    listen(eventName: string | symbol): Observable<Event>;
     emitDestroy(): void;
-    get destroy$(): Observable<Event>;
+    get destroy$(): Observable<Event<unknown>>;
 }

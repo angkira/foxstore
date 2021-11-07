@@ -1,7 +1,12 @@
 {
-    "extends": [
-        "airbnb-typescript",
-        "plugin:@typescript-eslint/recommended",
-        "plugin:import/typescript"
-      ]
+  "extends": [
+    "airbnb-typescript",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:import/typescript"
+  ],
+
+  "rules": {
+    "quotes": ["single"],
+    "indent": ["error", 2]
+  }
 }

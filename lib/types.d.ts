@@ -3,10 +3,16 @@ export declare const REDUCER_METAKEY = "@StoreReducers";
 export declare const ACTION_METAKEY = "@StoreActions";
 export declare const EFFECT_METAKEY = "@StoreEffects";
 export declare const STORE_DECORATED_METAKEY = "@Store";
-export declare type ActionFn<Payload = any> = (payload: Payload, state?: any) => Event;
-export declare type ReducerFn<Payload = any> = (payload: Payload, state?: any) => typeof state;
-export declare type EffectFn<Payload = any> = (payload: Payload, state?: any) => void;
-export declare const simplyReducer: ReducerFn;
+export declare enum HandlerName {
+    Action = "actions",
+    Reducer = "reducers",
+    Effect = "effects"
+}
+export declare type HandlerFn<State extends Record<string, any> = Record<string, any>, Payload = any, ReturnType = void> = (payload: Payload, state: State) => ReturnType;
+export declare type ActionFn<State extends Record<string, any> = Record<string, any>, Payload = any> = HandlerFn<State, Payload, Event>;
+export declare type ReducerFn<State extends Record<string, any> = Record<string, any>, Payload = any> = HandlerFn<State, Payload, Partial<State>>;
+export declare type EffectFn<State extends Record<string, any> = Record<string, any>, Payload = any> = HandlerFn<State, Payload>;
+export declare const simplyReducer: (fieldName: string) => ReducerFn;
 /**
  * Common Event-handlers options
  */
@@ -22,10 +28,10 @@ export declare type EventHandlerOptions = {
  * @interface IActionOptions
  */
 export declare type IActionOptions = EventHandlerOptions & {
-    writeAs: string;
+    writeAs?: string;
 };
-export interface MetaType {
-    eventName: string;
+export interface HandlerType {
+    eventName: string | symbol;
     options?: EventHandlerOptions;
 }
 /**
@@ -33,39 +39,47 @@ export interface MetaType {
  *
  * @class MetaAction
  */
-export declare class MetaAction implements MetaType {
-    eventName: string;
-    action: ActionFn;
+export declare class MetaAction<State extends Record<string, any> = Record<string, any>, Payload = any> implements HandlerType {
+    eventName: string | symbol;
+    action: ActionFn<State, Payload>;
     options?: IActionOptions | undefined;
-    constructor(eventName: string, action: ActionFn, options?: IActionOptions | undefined);
+    constructor(eventName: string | symbol, action: ActionFn<State, Payload>, options?: IActionOptions | undefined);
 }
 /**
  * Synchronous action that modify Store state
  *
  * @class MetaReducer
  */
-export declare class MetaReducer implements MetaType {
-    eventName: string;
-    reducer: ReducerFn;
+export declare class MetaReducer<State extends Record<string, any> = Record<string, any>, Payload = any> implements HandlerType {
+    eventName: string | symbol;
+    reducer: ReducerFn<State, Payload>;
     options?: EventHandlerOptions | undefined;
-    constructor(eventName: string, reducer: ReducerFn, options?: EventHandlerOptions | undefined);
+    constructor(eventName: string | symbol, reducer: ReducerFn<State, Payload>, options?: EventHandlerOptions | undefined);
 }
 /**
  * Side-effects
  *
  * @class MetaEffect
  */
-export declare class MetaEffect implements MetaType {
-    eventName: string;
-    effect: EffectFn;
+export declare class MetaEffect<State extends Record<string, any> = Record<string, any>, Payload = any> implements HandlerType {
+    eventName: string | symbol;
+    effect: EffectFn<State, Payload>;
     options?: EventHandlerOptions | undefined;
-    constructor(eventName: string, effect: EffectFn, options?: EventHandlerOptions | undefined);
+    constructor(eventName: string | symbol, effect: EffectFn<State, Payload>, options?: EventHandlerOptions | undefined);
 }
-export declare type EventConfig = {
-    actions?: MetaAction[];
-    reducers?: MetaReducer[];
-    effects?: MetaEffect[];
+export declare type RawEventConfig<State extends Record<string, any>, Payload> = {
+    actions?: [ActionFn<State, Payload>, IActionOptions][];
+    reducers?: [ReducerFn<State, Payload>, EventHandlerOptions][];
+    effects?: [EffectFn<State, Payload>, EventHandlerOptions][];
 };
-export declare type EventSchemeType = {
-    [eventName: string]: EventConfig;
+export declare class EventConfig<State extends Record<string, any> = Record<string, any>, Payload = any | void> {
+    actions?: MetaAction<State, Payload>[];
+    reducers?: MetaReducer<State, Payload>[];
+    effects?: MetaEffect<State, Payload>[];
+    payload?: Payload;
+    constructor(eventName: string | symbol, config?: RawEventConfig<State, Payload>);
+}
+export declare type EventConfigByName<State extends Record<string, any> = Record<string, any>, Payload = any | void> = {
+    [eventName: string | symbol]: EventConfig<State, Payload>;
 };
+export declare type EventSchemeType = Record<string | symbol, EventConfig>;
