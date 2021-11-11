@@ -76,10 +76,10 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
-"@types/ramda@^0.27.39":
-  version "0.27.46"
-  resolved "https://registry.yarnpkg.com/@types/ramda/-/ramda-0.27.46.tgz#05ab23a4fd75668d26c674448f3d55cc215edd75"
-  integrity sha512-PpHUGfV3AkUT57kP9GzS6NIHHebd5wHuA19tV/SDqrVNkHrJJSfNEq/imyt7JGKBdn7VgktXUN137mrI/shzkw==
+"@types/ramda@^0.27.47":
+  version "0.27.47"
+  resolved "https://registry.yarnpkg.com/@types/ramda/-/ramda-0.27.47.tgz#b3655eb2be5e21dd692d5c95db03a450275d094b"
+  integrity sha512-kWB51Q/R+5jS6StvaZq2Q4+EFlUPAB5Av6OwgWddAEkjXMdrefRwR2/B5B9V7xYFO37dwwZ/q2iMLQHFIcOwDw==
   dependencies:
     ts-toolbelt "^6.15.1"
 
@@ -1059,6 +1059,11 @@ queue-microtask@^1.2.2:
   version "1.2.3"
   resolved "https://registry.yarnpkg.com/queue-microtask/-/queue-microtask-1.2.3.tgz#4929228bbc724dfac43e0efb058caf7b6cfb6243"
   integrity sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A==
+
+rambda@^6.9.0:
+  version "6.9.0"
+  resolved "https://registry.yarnpkg.com/rambda/-/rambda-6.9.0.tgz#17cd0b0c427295e00e8fe12de5bd63884502a9a4"
+  integrity sha512-yosVdGg1hNGkXPzqGiOYNEpXKjEOxzUCg2rB0l+NKdyCaSf4z+i5ojbN0IqDSezMMf71YEglI+ZUTgTffn5afw==
 
 ramda@^0.27.1:
   version "0.27.1"

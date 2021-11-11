@@ -1,4 +1,4 @@
-interface LogOptions {
+export interface LogOptions {
     logger?: (...args: unknown[]) => void;
     logOn?: boolean;
     events?: boolean;
@@ -8,7 +8,7 @@ interface LogOptions {
     state?: boolean;
 }
 
-interface HashMapOptions {
+export interface HashMapOptions {
     on?: boolean;
     HashMapKey?: string;
     HashMapFn?: (...args: any[]) => string | number | symbol; // In the Future

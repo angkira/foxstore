@@ -1,33 +1,21 @@
 import {
-    complement,
+    complement as not,
+    converge,
     filter,
+    flip,
+    identity,
+    ifElse,
+    includes,
     isEmpty,
-    keys,
     last,
     map,
     mapObjIndexed,
+    pickBy,
 } from 'ramda';
-import {
-    combineLatest,
-    from,
-    isObservable,
-    merge,
-    noop,
-    Observable,
-    of,
-    zip,
-} from 'rxjs';
-import {
-    map as rxMap,
-    mergeMap,
-    share,
-    shareReplay,
-    skipUntil,
-    take,
-    takeUntil,
-    tap,
-} from 'rxjs/operators';
-import { HandlerName, RawEventConfig } from '.';
+import { iif, isObservable, merge, Observable, zip } from 'rxjs';
+import { map as rxMap, shareReplay, skipUntil, take, takeUntil, tap, withLatestFrom } from 'rxjs/operators';
+
+import { EventSchemeKeys, HandlerName, HandlerNameList, RawEventConfig } from '.';
 import { Event } from './dispatcher';
 import { handleStreamOnce } from './helpers';
 import { ProtoStore } from './store';
@@ -36,10 +24,10 @@ import {
     EFFECT_METAKEY,
     EventConfig,
     EventSchemeType,
+    HandlerType,
     MetaAction,
     MetaEffect,
     MetaReducer,
-    HandlerType,
     REDUCER_METAKEY,
 } from './types';
 
@@ -50,40 +38,81 @@ import {
  */
 
 export const setupEventsSchemeFromDecorators = <
-    State extends Record<string, unknown>,
-    Scheme extends EventSchemeType,
+  State extends Record<string, unknown>,
+  Scheme extends EventSchemeType<State>
 >(
-    store: ProtoStore<State>,
-    eventScheme: Scheme,
+  store: ProtoStore<State>,
+  eventScheme: Scheme
 ) => {
-    const effects: MetaEffect[] =
-        Reflect.getMetadata(EFFECT_METAKEY, store.constructor) || [];
+  const effects: MetaEffect[] =
+    Reflect.getMetadata(EFFECT_METAKEY, store.constructor) || [];
 
-    const reducers: MetaReducer[] =
-        Reflect.getMetadata(REDUCER_METAKEY, store.constructor) || [];
+  const reducers: MetaReducer[] =
+    Reflect.getMetadata(REDUCER_METAKEY, store.constructor) || [];
 
-    const actions: MetaAction[] =
-        Reflect.getMetadata(ACTION_METAKEY, store.constructor) || [];
+  const actions: MetaAction[] =
+    Reflect.getMetadata(ACTION_METAKEY, store.constructor) || [];
 
-    const metadataEventScheme: EventSchemeType = eventScheme;
+  const metadataEventScheme: EventSchemeType<State> = eventScheme;
 
-    const handlerReducerByType =
-        (handlerName: HandlerName) =>
-          (scheme: EventSchemeType, handler: HandlerType) => {
-            scheme[handler.eventName as string] ||= { [handlerName]: [] };
-            
-            scheme[handler.eventName as string]![handlerName] ||= [];
-            
-            (scheme[handler.eventName as string]![handlerName] as typeof handler[]).push(handler);
+  const handlerReducerByType =
+    (handlerName: HandlerName) =>
+    (scheme: EventSchemeType<State>, handler: HandlerType) => {
+      scheme[handler.eventName as string] ||= { [handlerName]: [] };
 
-            return scheme;
-            };
+      scheme[handler.eventName as string]![handlerName] ||= [];
 
-    effects.reduce(handlerReducerByType(HandlerName.Effect), metadataEventScheme);
-    actions.reduce(handlerReducerByType(HandlerName.Action), metadataEventScheme);
-    reducers.reduce(handlerReducerByType(HandlerName.Reducer), metadataEventScheme);
+      (
+        scheme[handler.eventName as string]![handlerName] as typeof handler[]
+      ).push(handler);
 
-    store.eventScheme = metadataEventScheme;
+      return scheme;
+    };
+
+  effects.reduce(handlerReducerByType(HandlerName.Effect), metadataEventScheme);
+  actions.reduce(handlerReducerByType(HandlerName.Action), metadataEventScheme);
+  reducers.reduce(
+    handlerReducerByType(HandlerName.Reducer),
+    metadataEventScheme
+  );
+
+  store.eventScheme = metadataEventScheme;
+};
+
+type MaybeAsync<T> = Observable<T> | Promise<T> | T;
+
+type Handler<State extends Record<string, unknown>, Payload> =
+  | MetaAction<State, Payload>
+  | MetaReducer<State, Payload>
+  | MetaEffect<State, Payload>;
+
+const handlerApplicator = <
+  State extends Record<string, unknown>,
+  Payload,
+  H extends Handler<State, Payload> = Handler<State, Payload>
+>(
+  payloadObject: MaybeAsync<Payload>,
+  state: State,
+  handlers: H[],
+  handlerToApply: (payload: Payload, state: State) => (handlers: H[]) => void
+) => {
+  const applyHandler = handleStreamOnce({
+    next: (payload: Payload) => handlerToApply(payload, state)(handlers),
+  });
+
+  if (isObservable(payloadObject)) {
+    applyHandler(payloadObject);
+    return;
+  }
+
+  if (payloadObject instanceof Promise) {
+    payloadObject.then((payload: Payload) =>
+      handlerToApply(payload, state)(handlers)
+    );
+    return;
+  }
+
+  handlerToApply(payloadObject, state)(handlers);
 };
 
 /**
@@ -91,266 +120,240 @@ export const setupEventsSchemeFromDecorators = <
  * Use it in Constructor if you use Angular Injectable
  */
 export const setupStoreEvents =
-    <State extends Record<string, unknown>,
-    Scheme extends EventSchemeType>(
-        eventScheme: Scheme
-    ) =>
-        (newInstance: ProtoStore<State, Scheme>) => {
-            const reducerHandler = reducerMetaHandler(newInstance);
+  <
+    State extends Record<string, unknown>,
+    Scheme extends EventSchemeType<State>
+  >(
+    eventScheme: Scheme
+  ) =>
+  (newInstance: ProtoStore<State, Scheme>) => {
+    const handlerParserMap = {
+      [HandlerName.Action]: actionMetaHandler(newInstance),
+      [HandlerName.Reducer]: reducerMetaHandler(newInstance),
+      [HandlerName.Effect]: effectMetaHandler(newInstance),
+    };
 
-            const effectHandler = effectMetaHandler(newInstance);
+    type SchemeKeys = EventSchemeKeys<State, Scheme>;
 
-            const actionHandler = actionMetaHandler(newInstance);
+    const hasRequiredEvents = (handler: HandlerType) =>
+      !!handler.options?.requiredEvents;
 
-            const actionAsyncHandler = (
-                payloadObject: Observable<unknown> | unknown,
-                state: State,
-                actions: MetaAction[]
-            ) => {
-                const applyAction = handleStreamOnce({
-                    next: <T>(payload: T) =>
-                        actionHandler(payload, state)(actions as MetaAction[]),
-                });
+    const hasNotRequiredEvents = not(hasRequiredEvents);
 
-                if (isObservable(payloadObject)) {
-                    applyAction(payloadObject);
-                    return;
-                }
+    const isHandlersList = converge(
+      (v1: boolean, v2: boolean) => v1 && v2,
+      [flip(includes)(HandlerNameList), Array.isArray]
+    );
 
-                if (payloadObject instanceof Promise) {
-                    applyAction(from(payloadObject));
-                    return;
-                }
+    type ClearEventConfig<Payload> = Pick<
+      EventConfig<State, Payload>,
+      HandlerName
+    >;
 
-                actionHandler(payloadObject, state)(actions as MetaAction[]);
-            };
+    const filterSchemeHandlers =
+      (predicate: (handler: HandlerType) => boolean) => (scheme: Scheme) =>
+        mapObjIndexed(
+          <Payload>(eventConfig: EventConfig<State, Payload>) =>
+            mapObjIndexed(
+              ifElse(
+                isEmpty,
+                identity,
+                filter<Handler<State, Payload>>(predicate)
+              ),
+              pickBy<EventConfig<State, Payload>, ClearEventConfig<Payload>>(
+                isHandlersList,
+                eventConfig
+              )
+            ),
+          scheme
+        ) as Scheme;
 
-            const isEventHasRequiredEvents = (handler: HandlerType) =>
-                !!handler.options?.requiredEvents;
+    const eventSchemeOfSimpleEvents =
+      filterSchemeHandlers(hasNotRequiredEvents)(eventScheme);
 
-            const isEventHasNotRequiredEvents = complement(isEventHasRequiredEvents);
+    const eventSchemeOfRequiredEvents =
+      filterSchemeHandlers(hasRequiredEvents)(eventScheme);
 
-            const eventSchemeOfSimpleEvents = mapObjIndexed(
-                mapObjIndexed(filter(isEventHasNotRequiredEvents))
-            )(eventScheme);
+    type ExtendedEventConfig<Payload> = Record<
+      HandlerName,
+      [Observable<[Payload, State]>, Handler<State, Payload>][]
+    >;
 
-            const eventSchemeOfRequiredEvents = mapObjIndexed(
-                mapObjIndexed(filter(isEventHasRequiredEvents))
-            )(eventScheme);
-
-            const streamsWithRequiredEvents = Object.entries(
-                eventSchemeOfRequiredEvents
-            )
-                .map(
-                    ([eventName, eventConfig]: [string, EventConfig]) =>
-                        mapObjIndexed(
-                            map((handler: HandlerType) => [
-                                metaGetPayloadForHandler(newInstance)(
-                                    eventName,
-                                    handler.options?.requiredEvents?.eventNames
-                                ),
-                                handler,
-                            ])
-                        )(eventConfig) as Record<
-                            HandlerName,
-                            [Observable<[any, State]>, HandlerType][]
-                        >
+    const eventSchemeToHandledStreams = (eventScheme: Scheme) =>
+      Object.entries(eventScheme)
+      .map(<Payload>([eventName, eventConfig]: [
+          EventSchemeKeys<State, Scheme>,
+          ClearEventConfig<Payload>
+        ]) =>
+          mapObjIndexed(
+            map((handler: Handler<State, Payload>) => [
+              metaGetPayloadForHandler<State, Scheme>(newInstance)(
+                eventName,
+                handler.options?.requiredEvents?.eventNames
+              ),
+              handler,
+            ]),
+            eventConfig
+          ) as ExtendedEventConfig<Payload>
+      )
+      .flatMap(<Payload>(config: ExtendedEventConfig<Payload>) =>
+        HandlerNameList.flatMap((handlerName) =>
+          config[handlerName].map(
+            <H extends Handler<State, Payload>>([payload$, handler]: [
+              Observable<[Payload, State]>,
+              H
+            ]) =>
+              payload$.pipe(
+                tap(([payload, state]: [Payload, State]) =>
+                  handlerApplicator<
+                    State,
+                    Payload,
+                    H>(
+                      payload,
+                      state,
+                      [handler],
+                      handlerParserMap[handlerName] as
+                        (payload: Payload, state: State) => (handlers: H[]) => void
+                  )
                 )
-                .flatMap(({ actions, reducers, effects }) => [
-                    ...(actions || []).map(
-                        ([payload$, action]: [Observable<[any, State]>, HandlerType]) =>
-                            payload$.pipe(
-                                tap((payload) =>
-                                    actionAsyncHandler(...payload, [action as MetaAction])
-                                )
-                            )
-                    ),
-                    ...(reducers || []).map(
-                        ([payload$, reducer]: [Observable<[any, State]>, HandlerType]) =>
-                            payload$.pipe(
-                                tap((payload) =>
-                                    reducerHandler(...payload)([reducer as MetaReducer])
-                                )
-                            )
-                    ),
-                    ...(effects || []).map(
-                        ([payload$, effect]: [Observable<[any, State]>, HandlerType]) =>
-                            payload$.pipe(
-                                tap((payload) =>
-                                    effectHandler(...payload)([effect as MetaEffect])
-                                )
-                            )
-                    ),
-                ]);
+              )
+          )
+        )
+      );
 
-            const payloadStreams = (keys(eventSchemeOfSimpleEvents) as string[])
-                .filter((eventName) =>
-                    Object.values(eventSchemeOfSimpleEvents[eventName]).some(
-                        complement(isEmpty)
-                    )
-                )
-                .map((eventName: string) =>
-                    metaGetPayloadForHandler(newInstance)(eventName).pipe(
-                        tap(([payloadObject, state]) => {
-                            const logger =
-                                (newInstance.options?.logOptions?.logOn &&
-                                    newInstance.options?.logOptions?.events &&
-                                    newInstance.options?.logOptions?.logger) ||
-                                noop;
+    const payloadStreams = [
+      eventSchemeOfSimpleEvents,
+      eventSchemeOfRequiredEvents,
+    ].flatMap(eventSchemeToHandledStreams)
 
-                            logger({
-                                event: eventName,
-                                payload: payloadObject,
-                            });
+    merge(...payloadStreams)
+      .pipe(takeUntil(newInstance.eventDispatcher.destroy$))
+      .subscribe();
 
-                            const { actions, reducers, effects } =
-                                eventSchemeOfSimpleEvents[eventName];
-
-                            if (reducers instanceof Array && reducers?.length) {
-                                reducerHandler(payloadObject, state)(reducers as MetaReducer[]);
-                            }
-
-                            if (effects instanceof Array && effects?.length) {
-                                effectHandler(payloadObject, state)(effects as MetaEffect[]);
-                            }
-
-                            if (actions instanceof Array && actions?.length) {
-                                actionAsyncHandler(payloadObject, state, actions as MetaAction[]);
-                            }
-                        })
-                    )
-                );
-
-            merge(...payloadStreams, ...streamsWithRequiredEvents)
-                .pipe(takeUntil(newInstance.eventDispatcher.destroy$))
-                .subscribe();
-
-            return newInstance;
-        };
+    return newInstance;
+  };
 /**
  * Get event payload
  * @param instance - Store instance
  */
 function metaGetPayloadForHandler<
-    State extends Record<string, unknown>,
-    EventScheme extends EventSchemeType>({
-        eventDispatcher,
-        store$,
-    }: ProtoStore<State, EventScheme>): (
-        eventName: string,
-        requiredEvents?: string[]
-    ) => Observable<[any, State]> {
-    return (eventName: string, requiredEvents?: string[]) => {
-        const requiredEventStreams = requiredEvents?.map((eventName) =>
-            eventDispatcher.listen(eventName)
-        );
+  State extends Record<string, unknown>,
+  EventScheme extends EventSchemeType<State>,
+  EventName extends Exclude<keyof EventScheme, number> | string | symbol
+    = Exclude<keyof EventScheme, number> | string | symbol,
+  Payload extends EventScheme[EventName]['payload']
+    = EventScheme[EventName]['payload'],
+>(store: ProtoStore<State, EventScheme>) {
+  return (
+    eventName: EventName,
+    requiredEvents?: EventSchemeKeys<State, EventScheme>[]
+  ): Observable<[Payload, State]> => {
+    const requiredEventStreams = requiredEvents?.map((eventName) =>
+      store.listen(eventName)
+    ) ?? [];
 
-        return combineLatest([
-            (requiredEventStreams?.length
-                ? merge(
-                    // For first value emitting
-                    zip(
-                        ...requiredEventStreams,
-                        eventDispatcher.listen(eventName)
-                    ).pipe(take(1), rxMap(last)) as Observable<Event>,
-                    // Waiting for Required Events emitted
-                    eventDispatcher
-                        .listen(eventName)
-                        .pipe(skipUntil(zip(...requiredEventStreams)))
-                )
-                : eventDispatcher.listen(eventName)
-            ).pipe(
-                shareReplay(1),
-                mergeMap(({ payload }: Event) =>
-                    (payload instanceof Promise || isObservable(payload)
-                        ? from(payload)
-                        : of(payload)
-                    ).pipe(take(1))
-                ),
-                share<any>()
-            ),
-            (store$ as Observable<State>).pipe(take(1)),
-        ]);
-    };
+    const mainEvent$: Observable<Event<Payload>> = store.listen(eventName);
+
+    const firstValue$: Observable<Event<Payload>> = iif(
+      () => !!requiredEventStreams?.length,
+      zip(...requiredEventStreams, mainEvent$).pipe(
+        rxMap(streams => last(streams) as Event<Payload>),
+      ),
+      mainEvent$,
+    ).pipe(take(1));
+
+    return (requiredEventStreams?.length ?
+        merge(
+            firstValue$,
+            mainEvent$.pipe(skipUntil(zip(...requiredEventStreams)))
+          )
+        : mainEvent$
+      ).pipe(
+        rxMap(event => event?.payload as Payload),
+        withLatestFrom(store.store$.asObservable() as Observable<State>),
+        shareReplay<[Payload, State]>(1)
+      );
+  };
 }
 /**
  * Handler for reducer
  * @param instance
  */
-function reducerMetaHandler<State extends Record<string, unknown>, EventScheme extends EventSchemeType>(
-    instance: ProtoStore<State, EventScheme>
-) {
-    return (payload: unknown, state: State) => (reducers: MetaReducer[]) => {
-        let result = state;
+function reducerMetaHandler<
+  State extends Record<string, unknown>,
+  EventScheme extends EventSchemeType<State>
+>(instance: ProtoStore<State, EventScheme>) {
+  return <Payload>(payload: Payload, state: State) =>
+    (reducers: MetaReducer<State, Payload>[]) => {
+      let result = state;
 
-        reducers.forEach((reducer) => {
-            result = Object.assign(
-                result,
-                reducer.reducer.call(instance, payload, result)
-            );
+      reducers.forEach((reducer) => {
+        result = Object.assign(
+          result,
+          reducer.reducer.call(instance, payload, result)
+        );
 
-            instance.options?.logOptions?.logOn &&
-                instance.options.logOptions?.reducers &&
-                instance.options.logOptions.logger?.(`REDUCER: ${reducer.reducer.name}`);
-        });
+        const logOptions = instance.options?.logOptions;
+        const logString = `REDUCER: ${reducer.reducer.name}`;
+          
+        logOptions?.logOn &&
+          logOptions.reducers &&
+          logOptions.logger?.(logString);
+      });
 
-        instance.patch(result);
+      instance.patch(result);
     };
 }
 /**
  * Handler for Effect
  * @param instance
  */
-function effectMetaHandler<State extends Record<string, unknown>, EventScheme extends EventSchemeType>(
-    instance: ProtoStore<State, EventScheme>
-) {
-    return (payload: unknown, state: State) => (effects: MetaEffect[]) =>
-        effects.forEach((effect) => {
-            effect.effect.call(instance, payload, state);
+function effectMetaHandler<
+  State extends Record<string, unknown>,
+  EventScheme extends EventSchemeType<State>
+>(instance: ProtoStore<State, EventScheme>) {
+  return <Payload>(payload: Payload, state: State) =>
+    (effects: MetaEffect<State, Payload>[]) =>
+      effects.forEach((effect) => {
+        effect.effect.call(instance, payload, state);
 
-            instance.options?.logOptions?.logOn &&
-                instance.options.logOptions.effects &&
-                instance.options.logOptions.logger?.(`EFFECT: ${effect.effect.name}`);
-        });
+        const logOptions = instance.options?.logOptions;
+
+        const logString = `EFFECT: ${effect.effect.name}`;
+
+        logOptions?.logOn &&
+          logOptions.effects &&
+          logOptions.logger?.(logString);
+      });
 }
 /**
  * Handler for Action
  * @param instance
  */
-function actionMetaHandler<State extends Record<string, unknown>, EventScheme extends EventSchemeType>(
-    instance: ProtoStore<State, EventScheme>
-) {
-    return (payload: unknown, state: State) => (actions: MetaAction[]) =>
-        actions.forEach((action) => {
-            const result = action.action.call(instance, payload, state) as Event;
-            instance.eventDispatcher.dispatch(result);
+function actionMetaHandler<
+  State extends Record<string, unknown>,
+  EventScheme extends EventSchemeType<State>
+>(instance: ProtoStore<State, EventScheme>) {
+  return <Payload>(payload: Payload, state: State) =>
+    (actions: MetaAction<State, Payload>[]) =>
+      actions.forEach(action => {
+        const result = action.action.call(instance, payload, state);
 
-            instance.options?.logOptions?.logOn &&
-                instance.options.logOptions.actions &&
-                instance.options.logOptions.logger?.(`ACTION: ${action.action.name}`);
-        });
+        instance.eventDispatcher.dispatch(result);
+
+        const logOptions = instance.options?.logOptions;
+
+        const logString = `ACTION: ${action.action.name}`;
+
+        logOptions?.logOn &&
+          logOptions.actions &&
+          logOptions.logger?.(logString);
+      });
 }
 
-/**
- * Function to fix type-checking of SchemeEvents
- * @param scheme Scheme Object
- */
-
-export const schemeGen = <Scheme extends EventSchemeType>(scheme: Scheme): Scheme =>
-    scheme;
-
-const HandlerClassMap = {
-    actions: MetaAction,
-    reducers: MetaReducer,
-    effects: MetaEffect,
-}
-
-export const createHandlers = <State extends Record<string, unknown>, Payload>(
+export const createHandlers =
+  <State extends Record<string, unknown>, Payload>(
     config: RawEventConfig<State, Payload>
-) => (eventName: string | symbol): EventConfig<State, Payload> => new EventConfig(eventName, config)
-        
-        // [eventName]: mapObjIndexed(
-        //     (handlers: [HandlerFn, EventHandlerOptions][], handlerName: HandlerName) =>
-        //         handlers.map(([handlerFn, options]) =>
-        //             new HandlerClassMap[handlerName](eventName as string, handlerFn, options)))
-        //     (config)
+  ) =>
+  (eventName: string | symbol): EventConfig<State, Payload> =>
+    new EventConfig(eventName, config);

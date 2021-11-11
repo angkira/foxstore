@@ -36,4 +36,4 @@ export declare function Effect(eventName: string | string[], options?: EventHand
  * @param {Dispatcher} [customDispatcher]
  * @returns {*}
  */
-export declare function Store<State extends Record<string, unknown> = {}>(initState?: State, customDispatcher?: Dispatcher, eventScheme?: EventSchemeType): any;
+export declare function Store<State extends Record<string, unknown> = {}, EventScheme extends EventSchemeType<State> = EventSchemeType<State>>(initState: State | undefined, eventScheme: EventScheme, customDispatcher?: Dispatcher): any;

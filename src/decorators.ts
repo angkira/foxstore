@@ -132,10 +132,13 @@ export function Effect(
  * @param {Dispatcher} [customDispatcher]
  * @returns {*}
  */
-export function Store<State extends Record<string, unknown> = {}>(
+export function Store<
+  State extends Record<string, unknown> = {},
+  EventScheme extends EventSchemeType<State> = EventSchemeType<State>
+  >(
   initState: State = Object(),
+  eventScheme: EventScheme,
   customDispatcher?: Dispatcher,
-  eventScheme: EventSchemeType = {},
 ): any {
   return function (target: any = Object): (args: any[]) => ProtoStore<typeof initState> {
     const f: (args: any) => ProtoStore<State> = function (...args: any[]): ProtoStore<State> {
@@ -145,7 +148,7 @@ export function Store<State extends Record<string, unknown> = {}>(
 
       newInstance.eventDispatcher = customDispatcher || newInstance.eventDispatcher;
 
-      setupEventsSchemeFromDecorators<State>(newInstance, eventScheme);
+      setupEventsSchemeFromDecorators<State, EventScheme>(newInstance, eventScheme);
 
       // Copy metadata from decorated class to new instance
       Reflect.getMetadataKeys(target)

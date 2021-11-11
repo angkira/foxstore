@@ -25,8 +25,9 @@
   "author": "Yuriy Medvedev",
   "license": "ISC",
   "dependencies": {
-    "@types/ramda": "^0.27.39",
+    "@types/ramda": "^0.27.47",
     "eslint-config-airbnb": "^18.2.1",
+    "rambda": "^6.9.0",
     "ramda": "^0.27.1",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.4.0",

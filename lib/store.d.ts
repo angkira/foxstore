@@ -1,6 +1,6 @@
 import { Observable, BehaviorSubject } from 'rxjs';
-import { Dispatcher } from './dispatcher';
-import { EventSchemeType } from "./types";
+import { Dispatcher, Event } from './dispatcher';
+import { EventSchemeType } from './types';
 import 'reflect-metadata';
 import { StoreOptions } from './options';
 /**
@@ -10,7 +10,7 @@ import { StoreOptions } from './options';
  * @class ProtoStore
  * @template State - type | interface for state of Store
  */
-export declare class ProtoStore<State extends Record<string, any>, EventScheme extends EventSchemeType> {
+export declare class ProtoStore<State extends Record<string, unknown> = Record<string, unknown>, EventScheme extends EventSchemeType<State> = EventSchemeType<State>> {
     private initState?;
     eventScheme?: EventScheme | undefined;
     options: StoreOptions;
@@ -65,7 +65,8 @@ export declare class ProtoStore<State extends Record<string, any>, EventScheme e
      * @param eventName
      * @param payload
      */
-    dispatch<EventName extends keyof EventScheme, Payload extends EventScheme[EventName]['payload']>(eventName: EventName, payload?: Payload): this;
+    dispatch<EventName extends Exclude<keyof EventScheme, number> | string | symbol, Payload extends EventScheme[EventName]['payload']>(eventName: EventName, payload?: Payload): this;
+    listen<EventName extends Exclude<keyof EventScheme, number> | string | symbol, Payload extends EventScheme[EventName]['payload']>(eventName: EventName): Observable<Event<Payload>>;
     /**
      * This method lets to work with events dynamically
      *
