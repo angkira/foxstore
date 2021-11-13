@@ -1,35 +1,49 @@
 import {
-    complement as not,
-    converge,
-    filter,
-    flip,
-    identity,
-    ifElse,
-    includes,
-    isEmpty,
-    last,
-    map,
-    mapObjIndexed,
-    pickBy,
-} from 'ramda';
-import { iif, isObservable, merge, Observable, zip } from 'rxjs';
-import { map as rxMap, shareReplay, skipUntil, take, takeUntil, tap, withLatestFrom } from 'rxjs/operators';
-
-import { EventSchemeKeys, HandlerName, HandlerNameList, RawEventConfig } from '.';
-import { Event } from './dispatcher';
-import { handleStreamOnce } from './helpers';
-import { ProtoStore } from './store';
+  complement as not,
+  converge,
+  filter,
+  flip,
+  identity,
+  ifElse,
+  includes,
+  isEmpty,
+  last,
+  map,
+  mapObjIndexed,
+  pick,
+  pickBy,
+} from "ramda";
+import { iif, isObservable, merge, Observable, zip } from "rxjs";
 import {
-    ACTION_METAKEY,
-    EFFECT_METAKEY,
-    EventConfig,
-    EventSchemeType,
-    HandlerType,
-    MetaAction,
-    MetaEffect,
-    MetaReducer,
-    REDUCER_METAKEY,
-} from './types';
+  map as rxMap,
+  shareReplay,
+  skipUntil,
+  take,
+  takeUntil,
+  tap,
+  withLatestFrom,
+} from "rxjs/operators";
+
+import {
+  EventSchemeKeys,
+  HandlerName,
+  HandlerNameList,
+  RawEventConfig,
+} from ".";
+import { FoxEvent } from "./dispatcher";
+import { handleStreamOnce } from "./helpers";
+import { ProtoStore } from "./store";
+import {
+  ACTION_METAKEY,
+  EFFECT_METAKEY,
+  EventConfig,
+  EventSchemeType,
+  HandlerType,
+  MetaAction,
+  MetaEffect,
+  MetaReducer,
+  REDUCER_METAKEY,
+} from "./types";
 
 /**
  * Gets Actions, Reducers and Effects from metadata and create EventScheme
@@ -133,17 +147,10 @@ export const setupStoreEvents =
       [HandlerName.Effect]: effectMetaHandler(newInstance),
     };
 
-    type SchemeKeys = EventSchemeKeys<State, Scheme>;
-
     const hasRequiredEvents = (handler: HandlerType) =>
       !!handler.options?.requiredEvents;
 
     const hasNotRequiredEvents = not(hasRequiredEvents);
-
-    const isHandlersList = converge(
-      (v1: boolean, v2: boolean) => v1 && v2,
-      [flip(includes)(HandlerNameList), Array.isArray]
-    );
 
     type ClearEventConfig<Payload> = Pick<
       EventConfig<State, Payload>,
@@ -160,10 +167,7 @@ export const setupStoreEvents =
                 identity,
                 filter<Handler<State, Payload>>(predicate)
               ),
-              pickBy<EventConfig<State, Payload>, ClearEventConfig<Payload>>(
-                isHandlersList,
-                eventConfig
-              )
+              pick(HandlerNameList)(eventConfig)
             ),
           scheme
         ) as Scheme;
@@ -172,7 +176,7 @@ export const setupStoreEvents =
       filterSchemeHandlers(hasNotRequiredEvents)(eventScheme);
 
     const eventSchemeOfRequiredEvents =
-      filterSchemeHandlers(hasRequiredEvents)(eventScheme);
+      filterSchemeHandlers(hasRequiredEvents)(eventScheme);    
 
     type ExtendedEventConfig<Payload> = Record<
       HandlerName,
@@ -181,54 +185,56 @@ export const setupStoreEvents =
 
     const eventSchemeToHandledStreams = (eventScheme: Scheme) =>
       Object.entries(eventScheme)
-      .map(<Payload>([eventName, eventConfig]: [
-          EventSchemeKeys<State, Scheme>,
-          ClearEventConfig<Payload>
-        ]) =>
-          mapObjIndexed(
-            map((handler: Handler<State, Payload>) => [
-              metaGetPayloadForHandler<State, Scheme>(newInstance)(
-                eventName,
-                handler.options?.requiredEvents?.eventNames
-              ),
-              handler,
-            ]),
-            eventConfig
-          ) as ExtendedEventConfig<Payload>
-      )
-      .flatMap(<Payload>(config: ExtendedEventConfig<Payload>) =>
-        HandlerNameList.flatMap((handlerName) =>
-          config[handlerName].map(
-            <H extends Handler<State, Payload>>([payload$, handler]: [
-              Observable<[Payload, State]>,
-              H
-            ]) =>
-              payload$.pipe(
-                tap(([payload, state]: [Payload, State]) =>
-                  handlerApplicator<
-                    State,
-                    Payload,
-                    H>(
-                      payload,
-                      state,
-                      [handler],
-                      handlerParserMap[handlerName] as
-                        (payload: Payload, state: State) => (handlers: H[]) => void
-                  )
-                )
-              )
-          )
+        .map(
+          <Payload>([eventName, eventConfig]: [
+            EventSchemeKeys<State, Scheme>,
+            ClearEventConfig<Payload>
+          ]) =>
+            mapObjIndexed(
+              map((handler: Handler<State, Payload>) => [
+                metaGetPayloadForHandler<State, Scheme>(newInstance)(
+                  eventName,
+                  handler.options?.requiredEvents?.eventNames
+                ),
+                handler,
+              ]),
+              eventConfig
+            ) as ExtendedEventConfig<Payload>
         )
-      );
+        .flatMap(<Payload>(config: ExtendedEventConfig<Payload>) =>
+          HandlerNameList.flatMap((handlerName) =>
+            config![handlerName]
+              ? config[handlerName].map(
+                  <H extends Handler<State, Payload>>([payload$, handler]: [
+                    Observable<[Payload, State]>,
+                    H
+                  ]) =>
+                    payload$.pipe(
+                      tap(([payload, state]: [Payload, State]) =>
+                        handlerApplicator<State, Payload, H>(
+                          payload,
+                          state,
+                          [handler],
+                          handlerParserMap[handlerName] as (
+                            payload: Payload,
+                            state: State
+                          ) => (handlers: H[]) => void
+                        )
+                      )
+                    )
+                )
+              : []
+          )
+        );
 
     const payloadStreams = [
       eventSchemeOfSimpleEvents,
       eventSchemeOfRequiredEvents,
-    ].flatMap(eventSchemeToHandledStreams)
+    ].flatMap(eventSchemeToHandledStreams);
 
     merge(...payloadStreams)
       .pipe(takeUntil(newInstance.eventDispatcher.destroy$))
-      .subscribe();
+      .subscribe(console.warn);
 
     return newInstance;
   };
@@ -239,40 +245,41 @@ export const setupStoreEvents =
 function metaGetPayloadForHandler<
   State extends Record<string, unknown>,
   EventScheme extends EventSchemeType<State>,
-  EventName extends Exclude<keyof EventScheme, number> | string | symbol
-    = Exclude<keyof EventScheme, number> | string | symbol,
-  Payload extends EventScheme[EventName]['payload']
-    = EventScheme[EventName]['payload'],
+  EventName extends Exclude<keyof EventScheme, number> | string | symbol =
+    | Exclude<keyof EventScheme, number>
+    | string
+    | symbol,
+  Payload extends EventScheme[EventName]["payload"] = EventScheme[EventName]["payload"]
 >(store: ProtoStore<State, EventScheme>) {
   return (
     eventName: EventName,
     requiredEvents?: EventSchemeKeys<State, EventScheme>[]
   ): Observable<[Payload, State]> => {
-    const requiredEventStreams = requiredEvents?.map((eventName) =>
-      store.listen(eventName)
-    ) ?? [];
+    const requiredEventStreams =
+      requiredEvents?.map((eventName) => store.listen(eventName)) ?? [];
 
-    const mainEvent$: Observable<Event<Payload>> = store.listen(eventName);
+    const mainEvent$: Observable<FoxEvent<Payload>> = store.listen(eventName);
 
-    const firstValue$: Observable<Event<Payload>> = iif(
+    const firstValue$: Observable<FoxEvent<Payload>> = iif(
       () => !!requiredEventStreams?.length,
       zip(...requiredEventStreams, mainEvent$).pipe(
-        rxMap(streams => last(streams) as Event<Payload>),
+        rxMap((streams) => last(streams) as FoxEvent<Payload>)
       ),
-      mainEvent$,
+      mainEvent$
     ).pipe(take(1));
 
-    return (requiredEventStreams?.length ?
-        merge(
+    return (
+      requiredEventStreams?.length
+        ? merge(
             firstValue$,
             mainEvent$.pipe(skipUntil(zip(...requiredEventStreams)))
           )
         : mainEvent$
-      ).pipe(
-        rxMap(event => event?.payload as Payload),
-        withLatestFrom(store.store$.asObservable() as Observable<State>),
-        shareReplay<[Payload, State]>(1)
-      );
+    ).pipe(
+      rxMap((event) => event?.payload as Payload),
+      withLatestFrom(store.store$.asObservable() as Observable<State>),
+      shareReplay<[Payload, State]>(1),
+    );
   };
 }
 /**
@@ -293,12 +300,7 @@ function reducerMetaHandler<
           reducer.reducer.call(instance, payload, result)
         );
 
-        const logOptions = instance.options?.logOptions;
-        const logString = `REDUCER: ${reducer.reducer.name}`;
-          
-        logOptions?.logOn &&
-          logOptions.reducers &&
-          logOptions.logger?.(logString);
+        instance.log(reducer.reducer.name, HandlerName.Reducer);
       });
 
       instance.patch(result);
@@ -317,13 +319,7 @@ function effectMetaHandler<
       effects.forEach((effect) => {
         effect.effect.call(instance, payload, state);
 
-        const logOptions = instance.options?.logOptions;
-
-        const logString = `EFFECT: ${effect.effect.name}`;
-
-        logOptions?.logOn &&
-          logOptions.effects &&
-          logOptions.logger?.(logString);
+        instance.log(effect.effect.name, HandlerName.Effect);
       });
 }
 /**
@@ -336,18 +332,12 @@ function actionMetaHandler<
 >(instance: ProtoStore<State, EventScheme>) {
   return <Payload>(payload: Payload, state: State) =>
     (actions: MetaAction<State, Payload>[]) =>
-      actions.forEach(action => {
+      actions.forEach((action) => {
         const result = action.action.call(instance, payload, state);
 
         instance.eventDispatcher.dispatch(result);
 
-        const logOptions = instance.options?.logOptions;
-
-        const logString = `ACTION: ${action.action.name}`;
-
-        logOptions?.logOn &&
-          logOptions.actions &&
-          logOptions.logger?.(logString);
+        instance.log(action.action.name, HandlerName.Action);
       });
 }
 

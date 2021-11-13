@@ -1,18 +1,21 @@
 import { Observable, BehaviorSubject, pipe } from 'rxjs';
 import {
-  map as rxMap,
+  map,
   takeUntil,
   shareReplay,
   take,
-  map,
   distinctUntilChanged,
 } from 'rxjs/operators';
 import { identity, indexBy, mergeDeepRight, path, prop } from 'ramda';
-import { Dispatcher, Event } from './dispatcher';
+import { Dispatcher, FoxEvent } from './dispatcher';
 import { setupStoreEvents, setupEventsSchemeFromDecorators } from './setup';
 import { EventSchemeType, STORE_DECORATED_METAKEY } from './types';
 import 'reflect-metadata';
-import { StoreOptions, DefaultStoreOptions, LogOptions } from './options';
+import {
+  StoreOptions,
+  DefaultStoreOptions,
+  EntityToLog,
+} from './options';
 
 /**
  * Parent class that contains all basic methods of Store
@@ -40,19 +43,21 @@ export class ProtoStore<
     public eventScheme?: EventScheme,
     public options: StoreOptions = DefaultStoreOptions,
     public readonly eventDispatcher: Dispatcher = new Dispatcher(
-      new Event('storeInit', initState)
+      new FoxEvent('storeInit', initState),
+      options.dispatcher?.scheduler
     )
   ) {
     initState && this.patch(initState);
 
-    this.options = Object.assign({}, DefaultStoreOptions, options);
+    this.options = Object.assign(
+      {},
+      mergeDeepRight(DefaultStoreOptions, options)
+    );
 
     !Reflect.getMetadata(STORE_DECORATED_METAKEY, this.constructor) &&
       setupEventsSchemeFromDecorators(this, eventScheme || {});
-    
 
     eventScheme && setupStoreEvents<State, EventScheme>(eventScheme)(this);
-
   }
   /**
    * Selecting stream with data from Store by key.
@@ -68,7 +73,7 @@ export class ProtoStore<
       takeUntil<State[K]>(this.eventDispatcher.destroy$),
       shareReplay(1)
     )(
-      this.store$.pipe(rxMap(path([entityName as string]))) as Observable<
+      this.store$.pipe(map(path([entityName as string]))) as Observable<
         State[K]
       >
     );
@@ -100,16 +105,18 @@ export class ProtoStore<
 
     this.store$.next(patchedState);
 
-    const logOptions = this.options?.logOptions;
+    const storeName: string = `${
+      String(this.options?.storeName) || this['constructor'].name
+    }`;
 
-    const logString = `${this.options?.storeName || this['constructor'].name} | State updated: `;
-
-    logOptions?.logOn &&
-      logOptions?.state &&
-      logOptions?.logger?.(
-        logString,
-        patchedState
-      );
+    this.log(
+      {
+        storeName,
+        update,
+        patchedState,
+      },
+      'state'
+    );
 
     return this;
   }
@@ -134,20 +141,32 @@ export class ProtoStore<
     return this;
   }
 
-  /**
-   * Ethernal method to dispatch Store Event
-   * @param eventName
-   * @param payload
-   */
+  dispatch<Payload>(event: FoxEvent<Payload>): this;
   dispatch<
     EventName extends Exclude<keyof EventScheme, number> | string | symbol,
-    Payload extends EventScheme[EventName]['payload']
-  >(eventName: EventName, payload?: Payload): this {
-    const logOptions: LogOptions | undefined = this.options.logOptions;
+    Payload extends EventScheme[Exclude<EventName, FoxEvent>]['payload']
+  >(event: EventName, payload?: Payload): this {
+    if (event instanceof FoxEvent) {
+      this.eventDispatcher.dispatch(event);
 
-    logOptions?.logOn && logOptions.events && logOptions.logger?.(eventName);
+      this.log(
+        {
+          eventName: event.name,
+          payload: event.payload,
+        },
+        'events'
+      );
+    } else {
+      this.eventDispatcher.dispatch(new FoxEvent<Payload>(event, payload));
 
-    this.eventDispatcher.dispatch(new Event(eventName, payload));
+      this.log(
+        {
+          eventName: event,
+          payload,
+        },
+        'events'
+      );
+    }
 
     return this;
   }
@@ -155,8 +174,10 @@ export class ProtoStore<
   listen<
     EventName extends Exclude<keyof EventScheme, number> | string | symbol,
     Payload extends EventScheme[EventName]['payload']
-  >(eventName: EventName): Observable<Event<Payload>> {
-      return this.eventDispatcher.listen(eventName) as Observable<Event<Payload>>;
+  >(eventName: EventName): Observable<FoxEvent<Payload>> {
+    return this.eventDispatcher.listen(eventName) as Observable<
+      FoxEvent<Payload>
+    >;
   }
 
   /**
@@ -175,9 +196,18 @@ export class ProtoStore<
     this.eventDispatcher
       .listen(eventName)
       .pipe(options.once ? take(1) : map(identity))
-      .subscribe((event: Event) => callbackFn(event.payload));
+      .subscribe((event: FoxEvent) => callbackFn(event.payload));
 
     return this;
+  }
+
+  /**
+   * Method to destroy this Store and all subscriptions connected to it.
+   *
+   * @memberof ProtoStore
+   */
+  destroy(): void {
+    this.eventDispatcher.emitDestroy();
   }
 
   /**
@@ -211,12 +241,13 @@ export class ProtoStore<
     }
   }
 
-  /**
-   * Method to destroy this Store and all subscriptions connected to it.
-   *
-   * @memberof ProtoStore
-   */
-  destroy(): void {
-    this.eventDispatcher.emitDestroy();
+  public log<T>(entity: T, type: EntityToLog): this {
+    const logOptions = this.options.logOptions;
+
+    if (logOptions?.logOn && logOptions[type]) {
+      logOptions.logger?.(`${type.toUpperCase()}: `, entity);
+    }
+
+    return this;
   }
 }

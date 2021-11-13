@@ -1,4 +1,4 @@
-import { Event } from "./dispatcher";
+import { FoxEvent } from "./dispatcher";
 
 export const REDUCER_METAKEY = "@StoreReducers";
 
@@ -29,7 +29,7 @@ export type HandlerFn<
 export type ActionFn<
   State extends Record<string, unknown> = Record<string, unknown>,
   Payload = unknown
-> = HandlerFn<State, Payload, Event>;
+> = HandlerFn<State, Payload, FoxEvent>;
 
 export type ReducerFn<
   State extends Record<string, unknown> = Record<string, unknown>,
@@ -153,15 +153,15 @@ export class EventConfig<
         [HandlerName.Action]: config.actions?.map(
           ([action, options]) =>
             new MetaAction<State, Payload>(eventName, action, options)
-        ),
+        ) || [],
         [HandlerName.Reducer]: config.reducers?.map(
           ([reducer, options]) =>
             new MetaReducer<State, Payload>(eventName, reducer, options)
-        ),
+        ) || [],
         [HandlerName.Effect]: config.actions?.map(
           ([effect, options]) =>
             new MetaEffect<State, Payload>(eventName, effect, options)
-        ),
+        ) || [],
       });
   }
 }

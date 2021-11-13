@@ -7,7 +7,7 @@ import { filter, observeOn, shareReplay, takeWhile } from 'rxjs/operators';
  * @export
  * @class Event
  */
-export class Event<Payload = unknown> {
+export class FoxEvent<Payload = unknown> {
     constructor(
         public name: string | symbol,
         public payload?: Payload | Observable<Payload> | Promise<Payload>,
@@ -22,28 +22,28 @@ export class Event<Payload = unknown> {
  * @class Dispatcher
  */
 export class Dispatcher {
-    private eventBus$: ReplaySubject<Event> = new ReplaySubject<Event>();
+    private eventBus$: ReplaySubject<FoxEvent> = new ReplaySubject<FoxEvent>();
 
-    private readonly destroyEvent = new Event('Destroy');
+    private readonly destroyEvent = new FoxEvent('Destroy');
 
     constructor(
-        initEvent?: Event,
+        initEvent?: FoxEvent,
         private scheduler: SchedulerLike = queueScheduler,
     ) {
         initEvent && this.dispatch(initEvent);
     }
 
-    dispatch(event: Event): void {
+    dispatch(event: FoxEvent): void {
         this.eventBus$.next(event);
     }
 
-    listen(eventName: string | symbol): Observable<Event> {
+    listen(eventName: string | symbol): Observable<FoxEvent> {
         return this.eventBus$
             .pipe(
                 observeOn(this.scheduler),
-                takeWhile((event: Event) =>
+                takeWhile((event: FoxEvent) =>
                     event.name !== this.destroyEvent.name),
-                filter((event: Event) =>
+                filter((event: FoxEvent) =>
                     event.name === eventName),
                 shareReplay(1),
             );

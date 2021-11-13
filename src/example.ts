@@ -1,6 +1,6 @@
 import { ProtoStore } from './store';
 import { ActionFn, ReducerFn, EventSchemeType } from './types';
-import { Event } from './dispatcher';
+import { FoxEvent } from './dispatcher';
 import { createHandlers } from './setup';
 
 const initState = {
@@ -14,7 +14,7 @@ const enum EventKeys {
     CounterIncremented = 'CounterIncremented',
 }
 
-const incrementCounter: ActionFn<State, void> = (payload: void, state: State) => new Event('inited', (state.counter ?? 0) + 1);
+const incrementCounter: ActionFn<State, void> = (payload: void, state: State) => new FoxEvent('inited', (state.counter ?? 0) + 1);
 
 const saveCounter: ReducerFn<State, number> = (counter: number) => ({ counter });
 
@@ -37,3 +37,13 @@ const store = new ProtoStore<State, EventScheme>(initState, eventScheme);
 
 store.dispatch(EventKeys.IncrementCounter)
 store.dispatch(EventKeys.CounterIncremented, 10)
+
+class IncrementEvent extends FoxEvent<number> {
+    constructor(value: number) {
+        super(EventKeys.IncrementCounter, value)
+    }
+}
+
+const IncEvent = new IncrementEvent(10);
+
+store.dispatch(IncEvent);

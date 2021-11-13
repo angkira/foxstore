@@ -1,6 +1,6 @@
-import { RawEventConfig } from '.';
-import { ProtoStore } from './store';
-import { EventConfig, EventSchemeType } from './types';
+import { RawEventConfig } from ".";
+import { ProtoStore } from "./store";
+import { EventConfig, EventSchemeType } from "./types";
 /**
  * Gets Actions, Reducers and Effects from metadata and create EventScheme
  * @param store
