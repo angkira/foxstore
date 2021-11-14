@@ -1,10 +1,11 @@
 import { equals, pick } from 'ramda';
 import { distinctUntilChanged, takeUntil } from 'rxjs/operators';
 
-import { FoxEvent } from './dispatcher';
-import { applyCallbackToMaybeAsync } from './helpers';
-import { ProtoStore } from './store';
-import { MaybeAsync } from './types';
+import { FoxEvent } from '../core/dispatcher';
+import { ProtoStore } from '../core/store';
+import { MaybeAsync } from '../core/types';
+import { applyCallbackToMaybeAsync } from '../helpers';
+import { LocalStorageSaver } from './LocalStorageSaver';
 
 export interface Saver<
     State extends Record<string, unknown>
@@ -111,40 +112,6 @@ export const InitSaver = <State extends Record<string, unknown>>(store: ProtoSto
                 ),
             )(savingResult);
         });
-}
-
-export class LocalStorageSaver<
-    State extends Record<string, unknown>
-    > implements Saver<State> {
-    private storageKey: string = String(this.store.options.storeName || Symbol('Store'));
-
-    constructor(private store: ProtoStore<State>) { }
-
-    async save(state: Partial<State>): Promise<void | Error> {
-        try {
-            localStorage.setItem(this.storageKey, JSON.stringify(state));
-        } catch (error: unknown) {
-            if (error instanceof ReferenceError) {
-                return new Error('LocalStorage is not able!')
-            } else {
-                return error as Error;
-            }
-        }
-    }
-
-    async restore(): Promise<Partial<State> | null | Error> {
-        try {
-            const storedValue = localStorage.getItem(this.storageKey);
-
-            return storedValue ? JSON.parse(storedValue) : null;
-        } catch (error: unknown) {
-            if (error instanceof ReferenceError) {
-                return new Error('LocalStorage is not able!')
-            }
-        }
-
-        return null;
-    }
 }
 
 export const GetSaverByKey = <

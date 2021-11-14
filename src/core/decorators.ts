@@ -3,22 +3,22 @@ import 'reflect-metadata';
 import { assocPath } from 'ramda';
 
 import { Dispatcher } from './dispatcher';
+import { setupEventsSchemeFromDecorators } from './setup';
 import { ProtoStore } from './store';
 import {
-  ACTION_METAKEY,
-  ActionFn,
-  EFFECT_METAKEY,
-  EventHandlerOptions,
-  EventSchemeType,
-  IActionOptions,
-  MetaAction,
-  MetaEffect,
-  MetaReducer,
-  REDUCER_METAKEY,
-  ReducerFn,
-  STORE_DECORATED_METAKEY,
+    ACTION_METAKEY,
+    ActionFn,
+    EFFECT_METAKEY,
+    EventHandlerOptions,
+    EventSchemeType,
+    IActionOptions,
+    MetaAction,
+    MetaEffect,
+    MetaReducer,
+    REDUCER_METAKEY,
+    ReducerFn,
+    STORE_DECORATED_METAKEY,
 } from './types';
-import { setupEventsSchemeFromDecorators } from './setup';
 
 /**
  * Action MethodDecorator for Store class, works by metadata of constructor.

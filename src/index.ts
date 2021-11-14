@@ -1,6 +1,6 @@
-export * from './store';
-export * from './decorators';
-export * from './types';
-export * from './saver';
-export { Dispatcher, FoxEvent as Event } from './dispatcher';
-export { createHandlers } from './setup';
+export * from './core/store';
+export * from './core/decorators';
+export * from './core/types';
+export * from './saving/saver';
+export { Dispatcher, FoxEvent as Event } from './core/dispatcher';
+export { createHandlers } from './core/setup';

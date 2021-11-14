@@ -4,10 +4,10 @@ import { identity, indexBy, mergeDeepRight, path, prop } from 'ramda';
 import { BehaviorSubject, Observable, pipe } from 'rxjs';
 import { distinctUntilChanged, map, shareReplay, take, takeUntil } from 'rxjs/operators';
 
-import { GetSaverByKey } from '.';
+import { GetSaverByKey } from '..';
+import { InitSaver, Saver } from '../saving/saver';
 import { Dispatcher, FoxEvent } from './dispatcher';
 import { DefaultStoreOptions, EntityToLog, StoreOptions } from './options';
-import { InitSaver, Saver } from './saver';
 import { setupEventsSchemeFromDecorators, setupStoreEvents } from './setup';
 import { EventSchemeType, STORE_DECORATED_METAKEY } from './types';
 

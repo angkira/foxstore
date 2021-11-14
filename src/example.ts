@@ -1,7 +1,7 @@
-import { ProtoStore } from './store';
-import { ActionFn, ReducerFn, EventSchemeType } from './types';
-import { FoxEvent } from './dispatcher';
-import { createHandlers } from './setup';
+import { FoxEvent } from './core/dispatcher';
+import { createHandlers } from './core/setup';
+import { ProtoStore } from './core/store';
+import { ActionFn, ReducerFn } from './core/types';
 
 const initState = {
     counter: 0,

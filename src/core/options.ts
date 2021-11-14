@@ -1,6 +1,6 @@
 import { SchedulerLike } from 'rxjs';
 
-import { SaverOptions } from './saver';
+import { SaverOptions } from '../saving/saver';
 import { HandlerName } from './types';
 
 export type EntityToLog = HandlerName | "events" | "state";
