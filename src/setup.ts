@@ -1,38 +1,11 @@
-import {
-  complement as not,
-  converge,
-  filter,
-  flip,
-  identity,
-  ifElse,
-  includes,
-  isEmpty,
-  last,
-  map,
-  mapObjIndexed,
-  pick,
-  pickBy,
-} from "ramda";
-import { iif, isObservable, merge, Observable, zip } from "rxjs";
-import {
-  map as rxMap,
-  shareReplay,
-  skipUntil,
-  take,
-  takeUntil,
-  tap,
-  withLatestFrom,
-} from "rxjs/operators";
+import { complement as not, filter, identity, ifElse, isEmpty, last, map, mapObjIndexed, pick } from 'ramda';
+import { iif, isObservable, merge, Observable, zip } from 'rxjs';
+import { map as rxMap, shareReplay, skipUntil, take, takeUntil, tap, withLatestFrom } from 'rxjs/operators';
 
-import {
-  EventSchemeKeys,
-  HandlerName,
-  HandlerNameList,
-  RawEventConfig,
-} from ".";
-import { FoxEvent } from "./dispatcher";
-import { handleStreamOnce } from "./helpers";
-import { ProtoStore } from "./store";
+import { EventSchemeKeys, HandlerName, HandlerNameList, MaybeAsync, RawEventConfig, RequiredEventsOptions } from '.';
+import { FoxEvent } from './dispatcher';
+import { handleStreamOnce } from './helpers';
+import { ProtoStore } from './store';
 import {
   ACTION_METAKEY,
   EFFECT_METAKEY,
@@ -43,7 +16,7 @@ import {
   MetaEffect,
   MetaReducer,
   REDUCER_METAKEY,
-} from "./types";
+} from './types';
 
 /**
  * Gets Actions, Reducers and Effects from metadata and create EventScheme
@@ -92,8 +65,6 @@ export const setupEventsSchemeFromDecorators = <
 
   store.eventScheme = metadataEventScheme;
 };
-
-type MaybeAsync<T> = Observable<T> | Promise<T> | T;
 
 type Handler<State extends Record<string, unknown>, Payload> =
   | MetaAction<State, Payload>
@@ -194,7 +165,7 @@ export const setupStoreEvents =
               map((handler: Handler<State, Payload>) => [
                 metaGetPayloadForHandler<State, Scheme>(newInstance)(
                   eventName,
-                  handler.options?.requiredEvents?.eventNames
+                  handler.options?.requiredEvents,
                 ),
                 handler,
               ]),
@@ -234,7 +205,7 @@ export const setupStoreEvents =
 
     merge(...payloadStreams)
       .pipe(takeUntil(newInstance.eventDispatcher.destroy$))
-      .subscribe(console.warn);
+      .subscribe();
 
     return newInstance;
   };
@@ -253,10 +224,11 @@ function metaGetPayloadForHandler<
 >(store: ProtoStore<State, EventScheme>) {
   return (
     eventName: EventName,
-    requiredEvents?: EventSchemeKeys<State, EventScheme>[]
+    requiredEvents?: RequiredEventsOptions<EventSchemeKeys<State, EventScheme>>
   ): Observable<[Payload, State]> => {
     const requiredEventStreams =
-      requiredEvents?.map((eventName) => store.listen(eventName)) ?? [];
+      requiredEvents?.eventNames
+        ?.map((eventName) => store.listen(eventName)) ?? [];
 
     const mainEvent$: Observable<FoxEvent<Payload>> = store.listen(eventName);
 
@@ -271,8 +243,10 @@ function metaGetPayloadForHandler<
     return (
       requiredEventStreams?.length
         ? merge(
-            firstValue$,
-            mainEvent$.pipe(skipUntil(zip(...requiredEventStreams)))
+          firstValue$,
+          requiredEvents?.mode === 'always' 
+            ? mainEvent$.pipe(skipUntil(zip(...requiredEventStreams)))
+            : mainEvent$,
           )
         : mainEvent$
     ).pipe(

@@ -11,7 +11,6 @@ export class FoxEvent<Payload = unknown> {
     constructor(
         public name: string | symbol,
         public payload?: Payload | Observable<Payload> | Promise<Payload>,
-        public async: boolean = false,
     ) { }
 }
 

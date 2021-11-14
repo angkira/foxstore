@@ -98,6 +98,8 @@ export class ProtoStore<
    * @memberof ProtoStore
    */
   patch(update: Partial<State>): this {
+    const oldValue = this.snapshot;
+
     const patchedState = Object.assign(
       mergeDeepRight<State, Partial<State>>(this.snapshot, update),
       this.options?.hashMap?.on ? this.getHashMap(update) : {}
@@ -106,7 +108,7 @@ export class ProtoStore<
     this.store$.next(patchedState);
 
     const storeName: string = `${
-      String(this.options?.storeName) || this['constructor'].name
+      String(this.options?.storeName || this['constructor'].name)
     }`;
 
     this.log(
@@ -114,6 +116,7 @@ export class ProtoStore<
         storeName,
         update,
         patchedState,
+        oldValue,
       },
       'state'
     );
@@ -141,19 +144,16 @@ export class ProtoStore<
     return this;
   }
 
-  dispatch<Payload>(event: FoxEvent<Payload>): this;
+  // dispatch<Payload>(event: FoxEvent<Payload>): this;
   dispatch<
-    EventName extends Exclude<keyof EventScheme, number> | string | symbol,
-    Payload extends EventScheme[Exclude<EventName, FoxEvent>]['payload']
+    EventName extends Exclude<keyof EventScheme, number> | string | symbol | FoxEvent,
+    Payload extends EventScheme[Exclude<EventName, FoxEvent>]['payload'] = void
   >(event: EventName, payload?: Payload): this {
     if (event instanceof FoxEvent) {
       this.eventDispatcher.dispatch(event);
 
       this.log(
-        {
-          eventName: event.name,
-          payload: event.payload,
-        },
+        event,
         'events'
       );
     } else {
@@ -161,7 +161,7 @@ export class ProtoStore<
 
       this.log(
         {
-          eventName: event,
+          name: event,
           payload,
         },
         'events'

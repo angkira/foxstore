@@ -1,17 +1,21 @@
-import { FoxEvent } from "./dispatcher";
+import { Observable } from 'rxjs';
 
-export const REDUCER_METAKEY = "@StoreReducers";
+import { FoxEvent } from './dispatcher';
 
-export const ACTION_METAKEY = "@StoreActions";
+export const REDUCER_METAKEY = '@StoreReducers';
 
-export const EFFECT_METAKEY = "@StoreEffects";
+export const ACTION_METAKEY = '@StoreActions';
 
-export const STORE_DECORATED_METAKEY = "@Store";
+export const EFFECT_METAKEY = '@StoreEffects';
+
+export const STORE_DECORATED_METAKEY = '@Store';
+
+export type MaybeAsync<T> = Observable<T> | Promise<T> | T;
 
 export enum HandlerName {
-  Action = "actions",
-  Reducer = "reducers",
-  Effect = "effects",
+  Action = 'actions',
+  Reducer = 'reducers',
+  Effect = 'effects',
 }
 
 export const HandlerNameList: HandlerName[] = [
@@ -48,14 +52,18 @@ export const simplyReducer =
   // @ts-ignore
   <Payload extends State[K]>(payload: Payload) => ({ [fieldName]: payload });
 
+export type RequiredEventsMode = 'once' | 'always';
+
+export type RequiredEventsOptions<EventName extends string | symbol = string> = {
+  eventNames: EventName[];
+  mode: RequiredEventsMode;
+};
+
 /**
  * Common Event-handlers options
  */
 export type EventHandlerOptions = {
-  requiredEvents?: {
-    eventNames: string[];
-    mode: "once" | "always";
-  };
+  requiredEvents?: RequiredEventsOptions;
 };
 
 /**
