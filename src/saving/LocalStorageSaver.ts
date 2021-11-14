@@ -1,7 +1,6 @@
 import { ProtoStore } from '../core/store';
 import { Saver } from './saver';
 
-
 export class LocalStorageSaver<
     State extends Record<string, unknown>
     > implements Saver<State> {

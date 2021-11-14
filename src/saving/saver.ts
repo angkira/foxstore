@@ -1,5 +1,5 @@
 import { equals, pick } from 'ramda';
-import { distinctUntilChanged, takeUntil } from 'rxjs/operators';
+import { distinctUntilChanged, skip, takeUntil } from 'rxjs/operators';
 
 import { FoxEvent } from '../core/dispatcher';
 import { ProtoStore } from '../core/store';
@@ -95,7 +95,8 @@ export const InitSaver = <State extends Record<string, unknown>>(store: ProtoSto
                 compareByKeys(
                     saverOptions?.keysBySave || saverOptions?.keysToSave
                 )
-            )
+            ),
+            skip(Number(!!restoredValue)),
         )
         .subscribe((state: State | {}) => {
             const savedState = saverOptions?.keysToSave ?
