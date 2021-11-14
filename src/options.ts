@@ -1,5 +1,7 @@
 import { SchedulerLike } from 'rxjs';
-import { HandlerName } from "./types";
+
+import { SaverOptions } from './saver';
+import { HandlerName } from './types';
 
 export type EntityToLog = HandlerName | "events" | "state";
 
@@ -17,17 +19,18 @@ export interface HashMapOptions {
 }
 
 export interface DispatcherOptions {
-    scheduler?: SchedulerLike;
+  scheduler?: SchedulerLike;
 }
 
-export interface StoreOptions {
+export interface StoreOptions<State extends Record<string, unknown>> {
   storeName?: string | symbol;
   hashMap?: HashMapOptions;
   logOptions?: LogOptions;
   dispatcher?: DispatcherOptions;
+  saving?: SaverOptions<State>;
 }
 
-export const DefaultStoreOptions: StoreOptions = {
+export const DefaultStoreOptions: StoreOptions<any> = {
   logOptions: {
     events: true,
     logOn: false,

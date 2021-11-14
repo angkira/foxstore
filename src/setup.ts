@@ -1,21 +1,21 @@
 import { complement as not, filter, identity, ifElse, isEmpty, last, map, mapObjIndexed, pick } from 'ramda';
-import { iif, isObservable, merge, Observable, zip } from 'rxjs';
+import { iif, merge, Observable, zip } from 'rxjs';
 import { map as rxMap, shareReplay, skipUntil, take, takeUntil, tap, withLatestFrom } from 'rxjs/operators';
 
 import { EventSchemeKeys, HandlerName, HandlerNameList, MaybeAsync, RawEventConfig, RequiredEventsOptions } from '.';
 import { FoxEvent } from './dispatcher';
-import { handleStreamOnce } from './helpers';
+import { applyCallbackToMaybeAsync } from './helpers';
 import { ProtoStore } from './store';
 import {
-  ACTION_METAKEY,
-  EFFECT_METAKEY,
-  EventConfig,
-  EventSchemeType,
-  HandlerType,
-  MetaAction,
-  MetaEffect,
-  MetaReducer,
-  REDUCER_METAKEY,
+    ACTION_METAKEY,
+    EFFECT_METAKEY,
+    EventConfig,
+    EventSchemeType,
+    HandlerType,
+    MetaAction,
+    MetaEffect,
+    MetaReducer,
+    REDUCER_METAKEY,
 } from './types';
 
 /**
@@ -80,25 +80,7 @@ const handlerApplicator = <
   state: State,
   handlers: H[],
   handlerToApply: (payload: Payload, state: State) => (handlers: H[]) => void
-) => {
-  const applyHandler = handleStreamOnce({
-    next: (payload: Payload) => handlerToApply(payload, state)(handlers),
-  });
-
-  if (isObservable(payloadObject)) {
-    applyHandler(payloadObject);
-    return;
-  }
-
-  if (payloadObject instanceof Promise) {
-    payloadObject.then((payload: Payload) =>
-      handlerToApply(payload, state)(handlers)
-    );
-    return;
-  }
-
-  handlerToApply(payloadObject, state)(handlers);
-};
+) => applyCallbackToMaybeAsync((payload: Payload) => handlerToApply(payload, state)(handlers))(payloadObject);
 
 /**
  * Setup handling of Reducers, Actions, SideEffects without Decorator,

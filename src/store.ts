@@ -1,21 +1,15 @@
-import { Observable, BehaviorSubject, pipe } from 'rxjs';
-import {
-  map,
-  takeUntil,
-  shareReplay,
-  take,
-  distinctUntilChanged,
-} from 'rxjs/operators';
-import { identity, indexBy, mergeDeepRight, path, prop } from 'ramda';
-import { Dispatcher, FoxEvent } from './dispatcher';
-import { setupStoreEvents, setupEventsSchemeFromDecorators } from './setup';
-import { EventSchemeType, STORE_DECORATED_METAKEY } from './types';
 import 'reflect-metadata';
-import {
-  StoreOptions,
-  DefaultStoreOptions,
-  EntityToLog,
-} from './options';
+
+import { identity, indexBy, mergeDeepRight, path, prop } from 'ramda';
+import { BehaviorSubject, Observable, pipe } from 'rxjs';
+import { distinctUntilChanged, map, shareReplay, take, takeUntil } from 'rxjs/operators';
+
+import { GetSaverByKey } from '.';
+import { Dispatcher, FoxEvent } from './dispatcher';
+import { DefaultStoreOptions, EntityToLog, StoreOptions } from './options';
+import { InitSaver, Saver } from './saver';
+import { setupEventsSchemeFromDecorators, setupStoreEvents } from './setup';
+import { EventSchemeType, STORE_DECORATED_METAKEY } from './types';
 
 /**
  * Parent class that contains all basic methods of Store
@@ -41,7 +35,7 @@ export class ProtoStore<
   constructor(
     private initState?: State,
     public eventScheme?: EventScheme,
-    public options: StoreOptions = DefaultStoreOptions,
+    public options: StoreOptions<State> = DefaultStoreOptions,
     public readonly eventDispatcher: Dispatcher = new Dispatcher(
       new FoxEvent('storeInit', initState),
       options.dispatcher?.scheduler
@@ -49,15 +43,23 @@ export class ProtoStore<
   ) {
     initState && this.patch(initState);
 
-    this.options = Object.assign(
-      {},
-      mergeDeepRight(DefaultStoreOptions, options)
-    );
-
     !Reflect.getMetadata(STORE_DECORATED_METAKEY, this.constructor) &&
       setupEventsSchemeFromDecorators(this, eventScheme || {});
 
     eventScheme && setupStoreEvents<State, EventScheme>(eventScheme)(this);
+
+    options.saving?.saver && this.initSaving();
+  }
+
+  private initSaving(): void {
+    if (this.options.saving?.saver) {
+      const saver: Saver<State> = typeof this.options.saving
+        ?.saver === 'string' ?
+          GetSaverByKey(this.options.saving?.saver, this)
+          : this.options.saving?.saver;
+
+      InitSaver(this)(saver);
+    }
   }
   /**
    * Selecting stream with data from Store by key.
