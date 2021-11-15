@@ -1,8 +1,10 @@
-import { Event } from "./dispatcher";
+import { Observable } from 'rxjs';
+import { FoxEvent } from './dispatcher';
 export declare const REDUCER_METAKEY = "@StoreReducers";
 export declare const ACTION_METAKEY = "@StoreActions";
 export declare const EFFECT_METAKEY = "@StoreEffects";
 export declare const STORE_DECORATED_METAKEY = "@Store";
+export declare type MaybeAsync<T> = Observable<T> | Promise<T> | T;
 export declare enum HandlerName {
     Action = "actions",
     Reducer = "reducers",
@@ -10,18 +12,20 @@ export declare enum HandlerName {
 }
 export declare const HandlerNameList: HandlerName[];
 export declare type HandlerFn<State extends Record<string, unknown> = Record<string, unknown>, Payload = unknown, ReturnType = void> = (payload: Payload, state: State) => ReturnType;
-export declare type ActionFn<State extends Record<string, unknown> = Record<string, unknown>, Payload = unknown> = HandlerFn<State, Payload, Event>;
+export declare type ActionFn<State extends Record<string, unknown> = Record<string, unknown>, Payload = unknown> = HandlerFn<State, Payload, FoxEvent>;
 export declare type ReducerFn<State extends Record<string, unknown> = Record<string, unknown>, Payload = unknown> = HandlerFn<State, Payload, Partial<State>>;
 export declare type EffectFn<State extends Record<string, unknown> = Record<string, unknown>, Payload = unknown> = HandlerFn<State, Payload>;
 export declare const simplyReducer: <State extends Record<string, unknown>, K extends keyof State = keyof State>(fieldName: K) => ReducerFn<State, State[K]>;
+export declare type RequiredEventsMode = 'once' | 'always';
+export declare type RequiredEventsOptions<EventName extends string | symbol = string> = {
+    eventNames: EventName[];
+    mode: RequiredEventsMode;
+};
 /**
  * Common Event-handlers options
  */
 export declare type EventHandlerOptions = {
-    requiredEvents?: {
-        eventNames: string[];
-        mode: "once" | "always";
-    };
+    requiredEvents?: RequiredEventsOptions;
 };
 /**
  * Options for StoreAction for optimized handling

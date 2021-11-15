@@ -1,8 +1,8 @@
-import { Observable, BehaviorSubject } from 'rxjs';
-import { Dispatcher, Event } from './dispatcher';
-import { EventSchemeType } from './types';
 import 'reflect-metadata';
-import { StoreOptions } from './options';
+import { BehaviorSubject, Observable } from 'rxjs';
+import { Dispatcher, FoxEvent } from './dispatcher';
+import { EntityToLog, StoreOptions } from './options';
+import { EventSchemeType } from './types';
 /**
  * Parent class that contains all basic methods of Store
  *
@@ -13,7 +13,7 @@ import { StoreOptions } from './options';
 export declare class ProtoStore<State extends Record<string, unknown> = Record<string, unknown>, EventScheme extends EventSchemeType<State> = EventSchemeType<State>> {
     private initState?;
     eventScheme?: EventScheme | undefined;
-    options: StoreOptions;
+    options: StoreOptions<State>;
     readonly eventDispatcher: Dispatcher;
     /**
      * Subject that contains
@@ -22,7 +22,8 @@ export declare class ProtoStore<State extends Record<string, unknown> = Record<s
      * @memberof ProtoStore
      */
     readonly store$: BehaviorSubject<State | {}>;
-    constructor(initState?: State | undefined, eventScheme?: EventScheme | undefined, options?: StoreOptions, eventDispatcher?: Dispatcher);
+    constructor(initState?: State | undefined, eventScheme?: EventScheme | undefined, options?: StoreOptions<State>, eventDispatcher?: Dispatcher);
+    private initSaving;
     /**
      * Selecting stream with data from Store by key.
      *
@@ -60,13 +61,8 @@ export declare class ProtoStore<State extends Record<string, unknown> = Record<s
      * @memberof ProtoStore
      */
     reset(): this;
-    /**
-     * Ethernal method to dispatch Store Event
-     * @param eventName
-     * @param payload
-     */
-    dispatch<EventName extends Exclude<keyof EventScheme, number> | string | symbol, Payload extends EventScheme[EventName]['payload']>(eventName: EventName, payload?: Payload): this;
-    listen<EventName extends Exclude<keyof EventScheme, number> | string | symbol, Payload extends EventScheme[EventName]['payload']>(eventName: EventName): Observable<Event<Payload>>;
+    dispatch<EventName extends Exclude<keyof EventScheme, number> | string | symbol | FoxEvent, Payload extends EventScheme[Exclude<EventName, FoxEvent>]['payload'] = void>(event: EventName, payload?: Payload): this;
+    listen<EventName extends Exclude<keyof EventScheme, number> | string | symbol, Payload extends EventScheme[EventName]['payload']>(eventName: EventName): Observable<FoxEvent<Payload>>;
     /**
      * This method lets to work with events dynamically
      *
@@ -77,14 +73,15 @@ export declare class ProtoStore<State extends Record<string, unknown> = Record<s
         once: boolean;
     }): this;
     /**
-     * For every list-entity in state returnes HashMap for easier using
-     *
-     */
-    private getHashMap;
-    /**
      * Method to destroy this Store and all subscriptions connected to it.
      *
      * @memberof ProtoStore
      */
     destroy(): void;
+    /**
+     * For every list-entity in state returnes HashMap for easier using
+     *
+     */
+    private getHashMap;
+    log<T>(entity: T, type: EntityToLog): this;
 }

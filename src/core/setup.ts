@@ -2,20 +2,20 @@ import { complement as not, filter, identity, ifElse, isEmpty, last, map, mapObj
 import { iif, merge, Observable, zip } from 'rxjs';
 import { map as rxMap, shareReplay, skipUntil, take, takeUntil, tap, withLatestFrom } from 'rxjs/operators';
 
-import { EventSchemeKeys, HandlerName, HandlerNameList, MaybeAsync, RawEventConfig, RequiredEventsOptions } from '..';
 import { applyCallbackToMaybeAsync } from '../helpers';
+import { EventSchemeKeys, HandlerName, HandlerNameList, MaybeAsync, RawEventConfig, RequiredEventsOptions } from './';
 import { FoxEvent } from './dispatcher';
 import { ProtoStore } from './store';
 import {
-    ACTION_METAKEY,
-    EFFECT_METAKEY,
-    EventConfig,
-    EventSchemeType,
-    HandlerType,
-    MetaAction,
-    MetaEffect,
-    MetaReducer,
-    REDUCER_METAKEY,
+  ACTION_METAKEY,
+  EFFECT_METAKEY,
+  EventConfig,
+  EventSchemeType,
+  HandlerType,
+  MetaAction,
+  MetaEffect,
+  MetaReducer,
+  REDUCER_METAKEY,
 } from './types';
 
 /**

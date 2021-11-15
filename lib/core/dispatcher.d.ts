@@ -5,11 +5,10 @@ import { Observable, SchedulerLike } from 'rxjs';
  * @export
  * @class Event
  */
-export declare class Event<Payload = unknown> {
+export declare class FoxEvent<Payload = unknown> {
     name: string | symbol;
     payload?: Payload | Observable<Payload> | Promise<Payload> | undefined;
-    async: boolean;
-    constructor(name: string | symbol, payload?: Payload | Observable<Payload> | Promise<Payload> | undefined, async?: boolean);
+    constructor(name: string | symbol, payload?: Payload | Observable<Payload> | Promise<Payload> | undefined);
 }
 /**
  * Simple Event-manager
@@ -21,9 +20,9 @@ export declare class Dispatcher {
     private scheduler;
     private eventBus$;
     private readonly destroyEvent;
-    constructor(initEvent?: Event, scheduler?: SchedulerLike);
-    dispatch(event: Event): void;
-    listen(eventName: string | symbol): Observable<Event>;
+    constructor(initEvent?: FoxEvent, scheduler?: SchedulerLike);
+    dispatch(event: FoxEvent): void;
+    listen(eventName: string | symbol): Observable<FoxEvent>;
     emitDestroy(): void;
-    get destroy$(): Observable<Event<unknown>>;
+    get destroy$(): Observable<FoxEvent<unknown>>;
 }

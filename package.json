@@ -27,6 +27,7 @@
   "dependencies": {
     "@types/ramda": "^0.27.47",
     "eslint-config-airbnb": "^18.2.1",
+    "mol_db": "^0.0.96",
     "rambda": "^6.9.0",
     "ramda": "^0.27.1",
     "reflect-metadata": "^0.1.13",

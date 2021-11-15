@@ -4,8 +4,7 @@ import { identity, indexBy, mergeDeepRight, path, prop } from 'ramda';
 import { BehaviorSubject, Observable, pipe } from 'rxjs';
 import { distinctUntilChanged, map, shareReplay, take, takeUntil } from 'rxjs/operators';
 
-import { GetSaverByKey } from '..';
-import { InitSaver, Saver } from '../saving/saver';
+import { InitSaver } from '../saving/saver';
 import { Dispatcher, FoxEvent } from './dispatcher';
 import { DefaultStoreOptions, EntityToLog, StoreOptions } from './options';
 import { setupEventsSchemeFromDecorators, setupStoreEvents } from './setup';
@@ -52,15 +51,12 @@ export class ProtoStore<
   }
 
   private initSaving(): void {
-    if (this.options.saving?.saver) {
-      const saver: Saver<State> = typeof this.options.saving
-        ?.saver === 'string' ?
-          GetSaverByKey(this.options.saving?.saver, this)
-          : this.options.saving?.saver;
-
-      InitSaver(this)(saver);
-    }
+    const SaverClass = this.options.saving
+      ?.saver;
+    
+    SaverClass && InitSaver(this)(SaverClass);
   }
+
   /**
    * Selecting stream with data from Store by key.
    *

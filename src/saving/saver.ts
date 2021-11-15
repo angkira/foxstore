@@ -10,7 +10,7 @@ import { LocalStorageSaver } from './LocalStorageSaver';
 export interface Saver<
     State extends Record<string, unknown>
     > {
-    save(state: Partial<State>): MaybeAsync<unknown>;
+    save(state: Partial<State>): MaybeAsync<void | Error>;
     restore(): MaybeAsync<Partial<State> | Error | null>;
 }
 
@@ -28,7 +28,7 @@ export interface SaverOptions<
     /**
      * Select one of the default or create your custom Saver
      */
-    saver: 'localStorage' | 'indexedDB' | Saver<State>,
+    saver: { new(store: ProtoStore<State>): Saver<State> },
     /**
      * Which keys of State would be saved
      */
@@ -68,8 +68,9 @@ export class RestoringError<State> extends FoxEvent<Partial<State> | {} | null> 
     }
 }
 
-export const InitSaver = <State extends Record<string, unknown>>(store: ProtoStore<State>) => (saver: Saver<State>) => {
+export const InitSaver = <State extends Record<string, unknown>>(store: ProtoStore<State>) => (SaverClass: { new(store: ProtoStore<State>): Saver<State> }) => {
     const saverOptions = store.options?.saving;
+    const saver = new SaverClass(store);
 
     const compareByKeys = (keys?: (keyof State)[]) => keys && (
         (prevState: State | {}, newState: State | {}) =>
@@ -124,6 +125,6 @@ export const GetSaverByKey = <
     switch (key) {
         case 'localStorage': return new LocalStorageSaver<State>(store);
         case 'indexedDB': return new LocalStorageSaver<State>(store);
-        default: return new LocalStorageSaver<State>(store);
+        default: throw new Error('No selected Saver: ' + key);
     }
 }
