@@ -1,7 +1,0 @@
-{
-    "extends": [
-        "airbnb-typescript",
-        "plugin:@typescript-eslint/recommended",
-        "plugin:import/typescript"
-      ]
-}
