@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { Dispatcher } from './dispatcher';
-import { EventHandlerOptions, EventSchemeType, IActionOptions } from './types';
+import { ProtoStore } from './store';
+import { ActionFn, EffectFn, EventHandlerOptions, EventSchemeType, IActionOptions, ReducerFn } from './types';
 /**
  * Action MethodDecorator for Store class, works by metadata of constructor.
  *
@@ -9,7 +10,7 @@ import { EventHandlerOptions, EventSchemeType, IActionOptions } from './types';
  * @param {IActionOptions} [options]
  * @returns {MethodDecorator}
  */
-export declare function Action(eventName: string | string[], options?: IActionOptions, outputEventName?: string): MethodDecorator;
+export declare function Action(eventName: string | string[], options?: IActionOptions, outputEventName?: string): <State extends Record<string, unknown>, Payload>(store: ProtoStore<State, EventSchemeType<State, any>>, propertyKey: string | symbol, { value: action }: TypedPropertyDescriptor<ActionFn<State, Payload>>) => void;
 /**
  * Reducer MethodDecorator for Store class, works by metadata of constructor.
  *
@@ -17,7 +18,7 @@ export declare function Action(eventName: string | string[], options?: IActionOp
  * @param {string} eventName
  * @returns {MethodDecorator}
  */
-export declare function Reducer(eventName: string | string[], options?: EventHandlerOptions): MethodDecorator;
+export declare function Reducer(eventName: string | string[], options?: EventHandlerOptions): <State extends Record<string, unknown>, Payload>(store: ProtoStore<State, EventSchemeType<State, any>>, propertyKey: string | symbol, { value: reducer }: TypedPropertyDescriptor<ReducerFn<State, Payload>>) => void;
 /**
  * Effect MethodDecorator for Store class, works by metadata of constructor.
  *
@@ -25,7 +26,7 @@ export declare function Reducer(eventName: string | string[], options?: EventHan
  * @param {string} eventName
  * @returns {MethodDecorator}
  */
-export declare function Effect(eventName: string | string[], options?: EventHandlerOptions): MethodDecorator;
+export declare function Effect(eventName: string | string[], options?: EventHandlerOptions): <State extends Record<string, unknown>, Payload>(store: ProtoStore<State, EventSchemeType<State, any>>, propertyKey: string | symbol, { value: effect }: TypedPropertyDescriptor<EffectFn<State, Payload>>) => void;
 /**
  * Store decorator. Can be used for Injectable services like in Angular
  * Waiting for Decorators will became not "experimental" to work with types correctly.

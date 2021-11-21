@@ -41,42 +41,43 @@ export declare type EventHandlerOptions = {
 export declare type IActionOptions = EventHandlerOptions & {
     writeAs?: string;
 };
-export interface HandlerType {
+export interface HandlerType<State extends Record<string, unknown>, Payload> {
     eventName: string | symbol;
     options?: EventHandlerOptions;
+    handler: HandlerFn<State, Payload>;
 }
 /**
  * Entity for interaction with ethernal system, like asynchronous actions (HttpRequest, etc.)
  *
  * @class MetaAction
  */
-export declare class MetaAction<State extends Record<string, unknown> = Record<string, unknown>, Payload = unknown> implements HandlerType {
+export declare class MetaAction<State extends Record<string, unknown> = Record<string, unknown>, Payload = unknown> implements HandlerType<State, Payload> {
     eventName: string | symbol;
-    action: ActionFn<State, Payload>;
+    handler: ActionFn<State, Payload>;
     options?: IActionOptions | undefined;
-    constructor(eventName: string | symbol, action: ActionFn<State, Payload>, options?: IActionOptions | undefined);
+    constructor(eventName: string | symbol, handler: ActionFn<State, Payload>, options?: IActionOptions | undefined);
 }
 /**
  * Synchronous action that modify Store state
  *
  * @class MetaReducer
  */
-export declare class MetaReducer<State extends Record<string, unknown> = Record<string, unknown>, Payload = unknown> implements HandlerType {
+export declare class MetaReducer<State extends Record<string, unknown> = Record<string, unknown>, Payload = unknown> implements HandlerType<State, Payload> {
     eventName: string | symbol;
-    reducer: ReducerFn<State, Payload>;
+    handler: ReducerFn<State, Payload>;
     options?: EventHandlerOptions | undefined;
-    constructor(eventName: string | symbol, reducer: ReducerFn<State, Payload>, options?: EventHandlerOptions | undefined);
+    constructor(eventName: string | symbol, handler: ReducerFn<State, Payload>, options?: EventHandlerOptions | undefined);
 }
 /**
  * Side-effects
  *
  * @class MetaEffect
  */
-export declare class MetaEffect<State extends Record<string, unknown> = Record<string, unknown>, Payload = unknown> implements HandlerType {
+export declare class MetaEffect<State extends Record<string, unknown> = Record<string, unknown>, Payload = unknown> implements HandlerType<State, Payload> {
     eventName: string | symbol;
-    effect: EffectFn<State, Payload>;
+    handler: EffectFn<State, Payload>;
     options?: EventHandlerOptions | undefined;
-    constructor(eventName: string | symbol, effect: EffectFn<State, Payload>, options?: EventHandlerOptions | undefined);
+    constructor(eventName: string | symbol, handler: EffectFn<State, Payload>, options?: EventHandlerOptions | undefined);
 }
 export declare const HandlerClassMap: {
     actions: typeof MetaAction;
