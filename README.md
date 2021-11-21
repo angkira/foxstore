@@ -10,7 +10,7 @@ $ npm install -s foxstore
 
 ###  Documentation
 
-Full documentation you can see here https://app.gitbook.com/@angkira/s/foxstore
+Full documentation you can see here https://angkira.gitbook.io/foxstore
 
 ### Source code
 
