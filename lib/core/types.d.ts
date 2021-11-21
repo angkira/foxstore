@@ -16,10 +16,23 @@ export declare type ActionFn<State extends Record<string, unknown> = Record<stri
 export declare type ReducerFn<State extends Record<string, unknown> = Record<string, unknown>, Payload = unknown> = HandlerFn<State, Payload, Partial<State>>;
 export declare type EffectFn<State extends Record<string, unknown> = Record<string, unknown>, Payload = unknown> = HandlerFn<State, Payload>;
 export declare const simplyReducer: <State extends Record<string, unknown>, K extends keyof State = keyof State>(fieldName: K) => ReducerFn<State, State[K]>;
-export declare type RequiredEventsMode = 'once' | 'always';
 export declare type RequiredEventsOptions<EventName extends string | symbol = string> = {
+    /**
+     * Events which are nessesary to handle main event
+     */
     eventNames: EventName[];
-    mode: RequiredEventsMode;
+    /**
+     * If true, the guard-events would be
+     * nessesary everytime for getting main event
+     */
+    always: boolean;
+    /**
+     * Handle Main event immediately when all
+     * the guard-events would be emmited
+     * if it was emitted earlier
+     * Or wait for one more Main event
+     */
+    emitImmediately?: boolean;
 };
 /**
  * Common Event-handlers options

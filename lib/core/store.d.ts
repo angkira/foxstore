@@ -62,7 +62,12 @@ export declare class ProtoStore<State extends Record<string, unknown> = Record<s
      */
     reset(): this;
     dispatch<EventName extends Exclude<keyof EventScheme, number> | string | symbol | FoxEvent, Payload extends EventScheme[Exclude<EventName, FoxEvent>]['payload'] = void>(event: EventName, payload?: Payload): this;
-    listen<EventName extends Exclude<keyof EventScheme, number> | string | symbol, Payload extends EventScheme[EventName]['payload']>(eventName: EventName): Observable<FoxEvent<Payload>>;
+    /**
+     *
+     * @param eventNames names of events to listen
+     * @returns Observable which emits only passed Events
+     */
+    listen<EventName extends Exclude<keyof EventScheme, number> | string | symbol, Payload extends EventScheme[EventName]['payload']>(...eventNames: EventName[]): Observable<FoxEvent<Payload>>;
     /**
      * This method lets to work with events dynamically
      *

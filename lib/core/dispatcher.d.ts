@@ -22,7 +22,7 @@ export declare class Dispatcher {
     private readonly destroyEvent;
     constructor(initEvent?: FoxEvent, scheduler?: SchedulerLike);
     dispatch(event: FoxEvent): void;
-    listen(eventName: string | symbol): Observable<FoxEvent>;
+    listen(...eventNames: (string | symbol)[]): Observable<FoxEvent>;
     emitDestroy(): void;
     get destroy$(): Observable<FoxEvent<unknown>>;
 }
