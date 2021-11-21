@@ -36,14 +36,16 @@ export class Dispatcher {
         this.eventBus$.next(event);
     }
 
-    listen(eventName: string | symbol): Observable<FoxEvent> {
+    listen(...eventNames: (string | symbol)[]): Observable<FoxEvent> {
+        const eventNameSet = new Set(eventNames);
+
         return this.eventBus$
             .pipe(
                 observeOn(this.scheduler),
                 takeWhile((event: FoxEvent) =>
                     event.name !== this.destroyEvent.name),
                 filter((event: FoxEvent) =>
-                    event.name === eventName),
+                    eventNameSet.has(event.name)),
                 shareReplay(1),
             );
     }

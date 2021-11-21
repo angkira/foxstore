@@ -1,6 +1,6 @@
-import { complement as not, filter, identity, ifElse, isEmpty, last, map, mapObjIndexed, pick } from 'ramda';
-import { iif, merge, Observable, zip } from 'rxjs';
-import { map as rxMap, shareReplay, skipUntil, take, takeUntil, tap, withLatestFrom } from 'rxjs/operators';
+import { complement as not, filter, identity, ifElse, isEmpty, map, mapObjIndexed, pick } from 'ramda';
+import { merge, Observable, pipe, zip } from 'rxjs';
+import { map as rxMap, shareReplay, skip, switchMap, take, takeUntil, tap, withLatestFrom } from 'rxjs/operators';
 
 import { applyCallbackToMaybeAsync } from '../helpers';
 import { EventSchemeKeys, HandlerName, HandlerNameList, MaybeAsync, RawEventConfig, RequiredEventsOptions } from './';
@@ -190,7 +190,8 @@ export const setupStoreEvents =
       .subscribe();
 
     return newInstance;
-  };
+    };
+  
 /**
  * Get event payload
  * @param instance - Store instance
@@ -202,42 +203,48 @@ function metaGetPayloadForHandler<
     | Exclude<keyof EventScheme, number>
     | string
     | symbol,
-  Payload extends EventScheme[EventName]["payload"] = EventScheme[EventName]["payload"]
+  Payload extends EventScheme[EventName]["payload"] =
+    EventScheme[EventName]["payload"]
 >(store: ProtoStore<State, EventScheme>) {
   return (
     eventName: EventName,
     requiredEvents?: RequiredEventsOptions<EventSchemeKeys<State, EventScheme>>
   ): Observable<[Payload, State]> => {
-    const requiredEventStreams =
-      requiredEvents?.eventNames
-        ?.map((eventName) => store.listen(eventName)) ?? [];
+    const requiredEventsStreams = requiredEvents?.eventNames.map(eventName => store.listen(eventName));
 
     const mainEvent$: Observable<FoxEvent<Payload>> = store.listen(eventName);
 
-    const firstValue$: Observable<FoxEvent<Payload>> = iif(
-      () => !!requiredEventStreams?.length,
-      zip(...requiredEventStreams, mainEvent$).pipe(
-        rxMap((streams) => last(streams) as FoxEvent<Payload>)
-      ),
-      mainEvent$
-    ).pipe(take(1));
-
-    return (
-      requiredEventStreams?.length
-        ? merge(
-          firstValue$,
-          requiredEvents?.mode === 'always' 
-            ? mainEvent$.pipe(skipUntil(zip(...requiredEventStreams)))
-            : mainEvent$,
-          )
-        : mainEvent$
-    ).pipe(
-      rxMap((event) => event?.payload as Payload),
+    const extendByState = pipe(
+      rxMap((event: FoxEvent) => event?.payload as Payload),
       withLatestFrom(store.store$.asObservable() as Observable<State>),
       shareReplay<[Payload, State]>(1),
     );
+
+    if (requiredEventsStreams?.length) {
+      const requiredEvents$ = zip(...requiredEventsStreams);
+
+      const guardedEvent$ = requiredEvents?.emitImmediately
+        ? requiredEvents$.pipe(
+          switchMap(() => mainEvent$.pipe(take(1)))
+        )
+        : zip(requiredEvents$, mainEvent$).pipe(
+            switchMap(() => mainEvent$.pipe(skip(1), take(1))),
+        )
+  
+
+      return extendByState(
+        merge(
+          guardedEvent$.pipe(take(1)),
+          (requiredEvents?.always
+            ? guardedEvent$.pipe(skip(1))
+            : mainEvent$
+          )));
+    }
+
+    return extendByState(mainEvent$);
   };
 }
+
 /**
  * Handler for reducer
  * @param instance
@@ -278,6 +285,7 @@ function effectMetaHandler<
         instance.log(effect.effect.name, HandlerName.Effect);
       });
 }
+
 /**
  * Handler for Action
  * @param instance

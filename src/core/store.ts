@@ -169,11 +169,16 @@ export class ProtoStore<
     return this;
   }
 
+  /**
+   * 
+   * @param eventNames names of events to listen
+   * @returns Observable which emits only passed Events
+   */
   listen<
     EventName extends Exclude<keyof EventScheme, number> | string | symbol,
     Payload extends EventScheme[EventName]['payload']
-  >(eventName: EventName): Observable<FoxEvent<Payload>> {
-    return this.eventDispatcher.listen(eventName) as Observable<
+  >(...eventNames: EventName[]): Observable<FoxEvent<Payload>> {
+    return this.eventDispatcher.listen(...eventNames) as Observable<
       FoxEvent<Payload>
     >;
   }

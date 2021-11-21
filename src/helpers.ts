@@ -2,6 +2,8 @@ import { isObservable, Observable, Observer, Subscription, take } from 'rxjs';
 
 import { MaybeAsync } from './core/types';
 
+export type Class<T> = { new(...args: any[]): T };
+
 export const handleStreamOnce = <T>(observer: Partial<Observer<T>>) => (stream$: Observable<T>) => 
     stream$.pipe(take(1)).subscribe(observer);
 

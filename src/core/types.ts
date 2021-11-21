@@ -52,11 +52,23 @@ export const simplyReducer =
   // @ts-ignore
   <Payload extends State[K]>(payload: Payload) => ({ [fieldName]: payload });
 
-export type RequiredEventsMode = 'once' | 'always';
-
 export type RequiredEventsOptions<EventName extends string | symbol = string> = {
+  /**
+   * Events which are nessesary to handle main event
+   */
   eventNames: EventName[];
-  mode: RequiredEventsMode;
+  /**
+   * If true, the guard-events would be 
+   * nessesary everytime for getting main event
+   */
+  always: boolean;
+  /**
+   * Handle Main event immediately when all
+   * the guard-events would be emmited
+   * if it was emitted earlier
+   * Or wait for one more Main event
+   */
+  emitImmediately?: boolean;
 };
 
 /**
