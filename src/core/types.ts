@@ -62,13 +62,6 @@ export type RequiredEventsOptions<EventName extends string | symbol = string> = 
    * nessesary everytime for getting main event
    */
   always: boolean;
-  /**
-   * Handle Main event immediately when all
-   * the guard-events would be emmited
-   * if it was emitted earlier
-   * Or wait for one more Main event
-   */
-  emitImmediately?: boolean;
 };
 
 /**

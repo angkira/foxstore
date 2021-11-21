@@ -1,6 +1,6 @@
-import { complement as not, filter, identity, ifElse, isEmpty, map, mapObjIndexed, pick } from 'ramda';
+import { complement as not, filter, identity, ifElse, isEmpty, last, map, mapObjIndexed, pick } from 'ramda';
 import { merge, Observable, pipe, zip } from 'rxjs';
-import { map as rxMap, shareReplay, skip, switchMap, take, takeUntil, tap, withLatestFrom } from 'rxjs/operators';
+import { map as rxMap, shareReplay, skip, take, takeUntil, tap, withLatestFrom } from 'rxjs/operators';
 
 import { applyCallbackToMaybeAsync } from '../helpers';
 import { EventSchemeKeys, HandlerName, HandlerNameList, MaybeAsync, RawEventConfig, RequiredEventsOptions } from './';
@@ -210,8 +210,6 @@ function metaGetPayloadForHandler<
     eventName: EventName,
     requiredEvents?: RequiredEventsOptions<EventSchemeKeys<State, EventScheme>>
   ): Observable<[Payload, State]> => {
-    const requiredEventsStreams = requiredEvents?.eventNames.map(eventName => store.listen(eventName));
-
     const mainEvent$: Observable<FoxEvent<Payload>> = store.listen(eventName);
 
     const extendByState = pipe(
@@ -220,17 +218,15 @@ function metaGetPayloadForHandler<
       shareReplay<[Payload, State]>(1),
     );
 
-    if (requiredEventsStreams?.length) {
+    if (requiredEvents?.eventNames?.length) {
+      const requiredEventsStreams = requiredEvents?.eventNames.map(
+        eventName => store.listen(eventName));
+      
       const requiredEvents$ = zip(...requiredEventsStreams);
 
-      const guardedEvent$ = requiredEvents?.emitImmediately
-        ? requiredEvents$.pipe(
-          switchMap(() => mainEvent$.pipe(take(1)))
+      const guardedEvent$ = zip(requiredEvents$, mainEvent$).pipe(
+          rxMap((streams) => last(streams) as FoxEvent)
         )
-        : zip(requiredEvents$, mainEvent$).pipe(
-            switchMap(() => mainEvent$.pipe(skip(1), take(1))),
-        )
-  
 
       return extendByState(
         merge(
