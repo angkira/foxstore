@@ -6,19 +6,48 @@ import { Dispatcher } from './dispatcher';
 import { setupEventsSchemeFromDecorators } from './setup';
 import { ProtoStore } from './store';
 import {
-    ACTION_METAKEY,
-    ActionFn,
-    EFFECT_METAKEY,
-    EventHandlerOptions,
-    EventSchemeType,
-    IActionOptions,
-    MetaAction,
-    MetaEffect,
-    MetaReducer,
-    REDUCER_METAKEY,
-    ReducerFn,
-    STORE_DECORATED_METAKEY,
+  ACTION_METAKEY,
+  ActionFn,
+  EFFECT_METAKEY,
+  EffectFn,
+  EventHandlerOptions,
+  EventSchemeType,
+  HandlerFn,
+  HandlerType,
+  IActionOptions,
+  MetaAction,
+  MetaEffect,
+  MetaReducer,
+  REDUCER_METAKEY,
+  ReducerFn,
+  STORE_DECORATED_METAKEY,
 } from './types';
+
+const writeHandlerByReflectKey = <
+  State extends Record<string, unknown>,
+  Payload,
+  HandlerConstructor extends { new(...args: any): HandlerType<State, Payload> },
+  Options extends EventHandlerOptions,
+  >(
+    eventName: string | string[],
+    options: Options | undefined,
+    store: ProtoStore<State>,
+    KEY: string,
+    handler: HandlerFn<State, Payload>,
+    handlerMetaClass: HandlerConstructor,
+) => {
+  const handlers: HandlerType<State, Payload>[] = Reflect.getMetadata(KEY, store.constructor) || [];
+
+    if (typeof eventName === 'string') {
+      handlers.push(
+        new handlerMetaClass(eventName, handler, options) as HandlerType<State, Payload>);
+    } else if (eventName instanceof Array) {
+      handlers.push(...eventName.map(event =>
+        new handlerMetaClass(event, handler, options) as HandlerType<State, Payload>));
+    }
+    
+    Reflect.defineMetadata(KEY, handlers, store.constructor);
+}
 
 /**
  * Action MethodDecorator for Store class, works by metadata of constructor.
@@ -32,23 +61,27 @@ export function Action(
   eventName: string | string[],
   options?: IActionOptions,
   outputEventName?: string,
-  ): MethodDecorator {
-  return function (
-    store: any,
+  ) {
+  return function <
+    State extends Record<string, unknown>,
+    Payload,
+  >(
+    store: ProtoStore<State>,
     propertyKey: string | symbol,
-    descriptor: PropertyDescriptor,
-    ) {
-    const actions: MetaAction[] = Reflect.getMetadata(ACTION_METAKEY, store.constructor) || [];
-
-    const action = descriptor.value as ActionFn;
-
-    if (typeof eventName === 'string') {
-      actions.push(new MetaAction(eventName, action, options));
-    } else if (eventName instanceof Array) {
-        actions.push(...eventName.map(event => new MetaAction(event, action, options)));
+    { value: action }: TypedPropertyDescriptor<ActionFn<State, Payload>>,
+  ) {
+    if (!action) {
+      return;
     }
-    
-    Reflect.defineMetadata(ACTION_METAKEY, actions, store.constructor);
+
+    writeHandlerByReflectKey(
+      eventName,
+      options,
+      store,
+      ACTION_METAKEY,
+      action,
+      MetaAction,
+    );
 
     if (!options?.writeAs) {
       return;
@@ -59,10 +92,10 @@ export function Action(
         {
           value: (payload: unknown) =>
             options?.writeAs ?
-              assocPath(options?.writeAs.split('.'), payload)({})
+              assocPath(options?.writeAs.split('.'), payload)({}) as Partial<State>
               : {}
           },
-          )
+        )
     } else {
       throw new Error('You did not pass outputEventName for Action ' + (propertyKey as string));
     }
@@ -79,19 +112,25 @@ export function Action(
 export function Reducer(
   eventName: string | string[],
   options?: EventHandlerOptions,
-  ): MethodDecorator {
-  return function (store: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) {
-    const reducer: ReducerFn = descriptor.value;
-    const reducers: MetaReducer[] = Reflect.getMetadata(REDUCER_METAKEY, store.constructor) || [];
+  ) {
+  return function <
+    State extends Record<string, unknown>,
+    Payload,
+    >(
+    store: ProtoStore<State>,
+    propertyKey: string | symbol,
+    { value: reducer }: TypedPropertyDescriptor<ReducerFn<State, Payload>>,
+  ) {
+    if (!reducer) { return; }
 
-    if (typeof eventName === 'string') {
-      reducers.push(new MetaReducer(eventName, reducer, options));
-    } else if (eventName?.length) {
-      eventName.forEach(event =>
-        reducers.push(new MetaReducer(event, reducer, options)))
-    }
-
-    Reflect.defineMetadata(REDUCER_METAKEY, reducers, store.constructor);
+    writeHandlerByReflectKey(
+      eventName,
+      options,
+      store,
+      REDUCER_METAKEY,
+      reducer,
+      MetaReducer,
+    );
   };
 }
 
@@ -105,19 +144,25 @@ export function Reducer(
 export function Effect(
   eventName: string | string[],
   options?: EventHandlerOptions,
-  ): MethodDecorator {
-  return function (store: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) {
-    const effect = descriptor.value;
-    const effects: MetaEffect[] = Reflect.getMetadata(EFFECT_METAKEY, store.constructor) || [];
+  ) {
+  return function <
+    State extends Record<string, unknown>,
+    Payload,
+    >(
+    store: ProtoStore<State>,
+    propertyKey: string | symbol,
+    { value: effect }: TypedPropertyDescriptor<EffectFn<State, Payload>>,
+  ) {
+    if (!effect) { return; }
 
-    if (typeof eventName === 'string') {
-      effects.push(new MetaEffect(eventName, effect, options));
-    } else if (eventName?.length) {
-      eventName.forEach(event =>
-        effects.push(new MetaEffect(event, effect, options)))
-    }
-    
-    Reflect.defineMetadata(EFFECT_METAKEY, effects, store.constructor);
+    writeHandlerByReflectKey(
+      eventName,
+      options,
+      store,
+      EFFECT_METAKEY,
+      effect,
+      MetaEffect,
+    );
   };
 }
 

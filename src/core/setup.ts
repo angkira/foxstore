@@ -44,16 +44,19 @@ export const setupEventsSchemeFromDecorators = <
 
   const handlerReducerByType =
     (handlerName: HandlerName) =>
-    (scheme: EventSchemeType<State>, handler: HandlerType) => {
-      scheme[handler.eventName as string] ||= { [handlerName]: [] };
+      <Payload>(
+        scheme: EventSchemeType<State>,
+        handler: HandlerType<State, Payload>,
+      ) => {
+        scheme[handler.eventName as string] ||= { [handlerName]: [] };
 
-      scheme[handler.eventName as string]![handlerName] ||= [];
+        scheme[handler.eventName as string]![handlerName] ||= [];
 
-      (
-        scheme[handler.eventName as string]![handlerName] as typeof handler[]
-      ).push(handler);
+        (
+          scheme[handler.eventName as string]![handlerName] as typeof handler[]
+        ).push(handler);
 
-      return scheme;
+        return scheme;
     };
 
   effects.reduce(handlerReducerByType(HandlerName.Effect), metadataEventScheme);
@@ -100,7 +103,7 @@ export const setupStoreEvents =
       [HandlerName.Effect]: effectMetaHandler(newInstance),
     };
 
-    const hasRequiredEvents = (handler: HandlerType) =>
+    const hasRequiredEvents = <Payload>(handler: HandlerType<State, Payload>) =>
       !!handler.options?.requiredEvents;
 
     const hasNotRequiredEvents = not(hasRequiredEvents);
@@ -111,19 +114,20 @@ export const setupStoreEvents =
     >;
 
     const filterSchemeHandlers =
-      (predicate: (handler: HandlerType) => boolean) => (scheme: Scheme) =>
-        mapObjIndexed(
-          <Payload>(eventConfig: EventConfig<State, Payload>) =>
-            mapObjIndexed(
-              ifElse(
-                isEmpty,
-                identity,
-                filter<Handler<State, Payload>>(predicate)
+      <Payload>(predicate: (handler: HandlerType<State, Payload>) => boolean) =>
+        (scheme: Scheme) =>
+          mapObjIndexed(
+            (eventConfig: EventConfig<State, Payload>) =>
+              mapObjIndexed(
+                ifElse(
+                  isEmpty,
+                  identity,
+                  filter<Handler<State, Payload>>(predicate)
+                ),
+                pick(HandlerNameList)(eventConfig)
               ),
-              pick(HandlerNameList)(eventConfig)
-            ),
-          scheme
-        ) as Scheme;
+            scheme
+          ) as Scheme;
 
     const eventSchemeOfSimpleEvents =
       filterSchemeHandlers(hasNotRequiredEvents)(eventScheme);
@@ -256,10 +260,10 @@ function reducerMetaHandler<
       reducers.forEach((reducer) => {
         result = Object.assign(
           result,
-          reducer.reducer.call(instance, payload, result)
+          reducer.handler.call(instance, payload, result)
         );
 
-        instance.log(reducer.reducer.name, HandlerName.Reducer);
+        instance.log(reducer.handler.name, HandlerName.Reducer);
       });
 
       instance.patch(result);
@@ -276,9 +280,9 @@ function effectMetaHandler<
   return <Payload>(payload: Payload, state: State) =>
     (effects: MetaEffect<State, Payload>[]) =>
       effects.forEach((effect) => {
-        effect.effect.call(instance, payload, state);
+        effect.handler.call(instance, payload, state);
 
-        instance.log(effect.effect.name, HandlerName.Effect);
+        instance.log(effect.handler.name, HandlerName.Effect);
       });
 }
 
@@ -293,11 +297,11 @@ function actionMetaHandler<
   return <Payload>(payload: Payload, state: State) =>
     (actions: MetaAction<State, Payload>[]) =>
       actions.forEach((action) => {
-        const result = action.action.call(instance, payload, state);
+        const result = action.handler.call(instance, payload, state);
 
         instance.eventDispatcher.dispatch(result);
 
-        instance.log(action.action.name, HandlerName.Action);
+        instance.log(action.handler.name, HandlerName.Action);
       });
 }
 

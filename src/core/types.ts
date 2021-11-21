@@ -80,9 +80,13 @@ export type IActionOptions = EventHandlerOptions & {
   writeAs?: string; // To write gotten info exactly into Store as entity with selected name
 };
 
-export interface HandlerType {
+export interface HandlerType<
+  State extends Record<string, unknown>,
+  Payload,
+> {
   eventName: string | symbol;
   options?: EventHandlerOptions;
+  handler: HandlerFn<State, Payload>
 }
 
 /**
@@ -93,11 +97,11 @@ export interface HandlerType {
 export class MetaAction<
   State extends Record<string, unknown> = Record<string, unknown>,
   Payload = unknown
-> implements HandlerType
+> implements HandlerType<State, Payload>
 {
   constructor(
     public eventName: string | symbol,
-    public action: ActionFn<State, Payload>,
+    public handler: ActionFn<State, Payload>,
     public options?: IActionOptions
   ) {}
 }
@@ -110,11 +114,11 @@ export class MetaAction<
 export class MetaReducer<
   State extends Record<string, unknown> = Record<string, unknown>,
   Payload = unknown
-> implements HandlerType
+> implements HandlerType<State, Payload>
 {
   constructor(
     public eventName: string | symbol,
-    public reducer: ReducerFn<State, Payload>,
+    public handler: ReducerFn<State, Payload>,
     public options?: EventHandlerOptions
   ) {}
 }
@@ -127,11 +131,11 @@ export class MetaReducer<
 export class MetaEffect<
   State extends Record<string, unknown> = Record<string, unknown>,
   Payload = unknown
-> implements HandlerType
+> implements HandlerType<State, Payload>
 {
   constructor(
     public eventName: string | symbol,
-    public effect: EffectFn<State, Payload>,
+    public handler: EffectFn<State, Payload>,
     public options?: EventHandlerOptions
   ) {}
 }
