@@ -45,13 +45,6 @@ export type EffectFn<
   Payload = unknown
 > = HandlerFn<State, Payload>;
 
-export const simplyReducer =
-  <State extends Record<string, unknown>, K extends keyof State = keyof State>(
-    fieldName: K
-  ): ReducerFn<State, State[K]> =>
-  // @ts-ignore
-  <Payload extends State[K]>(payload: Payload) => ({ [fieldName]: payload });
-
 export type RequiredEventsOptions<EventName extends string | symbol = string> = {
   /**
    * Events which are nessesary to handle main event
@@ -69,6 +62,7 @@ export type RequiredEventsOptions<EventName extends string | symbol = string> = 
  */
 export type EventHandlerOptions = {
   requiredEvents?: RequiredEventsOptions;
+  order?: number,
 };
 
 /**

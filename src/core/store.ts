@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 
-import { identity, indexBy, mergeDeepRight, path, prop } from 'ramda';
+import { identity, indexBy, isEmpty, mergeDeepRight, path, prop } from 'ramda';
 import { BehaviorSubject, Observable, pipe } from 'rxjs';
 import { distinctUntilChanged, map, shareReplay, take, takeUntil } from 'rxjs/operators';
 
@@ -45,7 +45,8 @@ export class ProtoStore<
     !Reflect.getMetadata(STORE_DECORATED_METAKEY, this.constructor) &&
       setupEventsSchemeFromDecorators(this, eventScheme || {});
 
-    eventScheme && setupStoreEvents<State, EventScheme>(eventScheme)(this);
+    eventScheme && !isEmpty(eventScheme)
+      && setupStoreEvents<State, EventScheme>(eventScheme)(this);
 
     options.saving?.saver && this.initSaving();
   }

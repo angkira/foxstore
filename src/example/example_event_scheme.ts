@@ -1,9 +1,9 @@
-import { FoxEvent } from './core/dispatcher';
-import { DefaultStoreOptions } from './core/options';
-import { createHandlers } from './core/setup';
-import { ProtoStore } from './core/store';
-import { ActionFn, ReducerFn } from './core/types';
-import { writeAs } from './helpers';
+import { FoxEvent } from '../core/dispatcher';
+import { DefaultStoreOptions } from '../core/options';
+import { createHandlers } from '../core/setup';
+import { ProtoStore } from '../core/store';
+import { ActionFn, ReducerFn } from '../core/types';
+import { writeAs } from '../helpers';
 
 type Item = {};
 const someService: any = {};
@@ -110,4 +110,4 @@ store.dispatch(Events.LoadItems)
 
 store.dispatch(Events.UpdatePage, 6)
 
-store.dispatch(Events.UpdatePage, '6')
+// store.dispatch(Events.UpdatePage, '6')

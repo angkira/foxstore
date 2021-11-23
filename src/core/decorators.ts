@@ -67,7 +67,7 @@ export function Action(
   >(
     store: ProtoStore<State>,
     propertyKey: string | symbol,
-    { value: action }: TypedPropertyDescriptor<ActionFn<State, Payload>>,
+    { value: action }: { value?: ActionFn<State, Payload> },
   ) {
     if (!action) {
       return;
@@ -87,7 +87,7 @@ export function Action(
     }
 
     if (outputEventName) {
-      Reducer(outputEventName)(store, `${propertyKey as string}writeAs`,
+      Reducer(outputEventName, { order: 0 })(store, `${propertyKey as string}writeAs`,
         {
           value: writeAs<State>(options?.writeAs)
         },

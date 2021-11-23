@@ -7,7 +7,7 @@ import { filter, observeOn, shareReplay, takeWhile } from 'rxjs/operators';
  * @export
  * @class Event
  */
-export class FoxEvent<Payload = unknown> {
+export class FoxEvent<Payload = any> {
     constructor(
         public name: string | symbol,
         public payload?: Payload | Observable<Payload> | Promise<Payload>,

@@ -39,6 +39,10 @@ export const setupEventsSchemeFromDecorators = <
 
   const actions: MetaAction[] =
     Reflect.getMetadata(ACTION_METAKEY, store.constructor) || [];
+  
+  if ([effects, reducers, actions].every(isEmpty)) {
+    return;
+  }
 
   const metadataEventScheme: EventSchemeType<State> = eventScheme;
 
@@ -59,11 +63,17 @@ export const setupEventsSchemeFromDecorators = <
         return scheme;
     };
 
-  effects.reduce(handlerReducerByType(HandlerName.Effect), metadataEventScheme);
-  actions.reduce(handlerReducerByType(HandlerName.Action), metadataEventScheme);
+  effects.reduce(
+    handlerReducerByType(HandlerName.Effect),
+    metadataEventScheme,
+  );
+  actions.reduce(
+    handlerReducerByType(HandlerName.Action),
+    metadataEventScheme,
+  );
   reducers.reduce(
     handlerReducerByType(HandlerName.Reducer),
-    metadataEventScheme
+    metadataEventScheme,
   );
 
   store.eventScheme = metadataEventScheme;
@@ -74,6 +84,11 @@ type Handler<State extends Record<string, unknown>, Payload> =
   | MetaReducer<State, Payload>
   | MetaEffect<State, Payload>;
 
+const handlerSortByOrder = <State extends Record<string, unknown>, Payload>(
+  a: Handler<State, Payload>,
+  b: Handler<State, Payload>) =>
+    (a.options?.order || Infinity) - (b.options?.order || Infinity)
+
 const handlerApplicator = <
   State extends Record<string, unknown>,
   Payload,
@@ -83,7 +98,7 @@ const handlerApplicator = <
   state: State,
   handlers: H[],
   handlerToApply: (payload: Payload, state: State) => (handlers: H[]) => void
-) => applyCallbackToMaybeAsync((payload: Payload) => handlerToApply(payload, state)(handlers))(payloadObject);
+) => applyCallbackToMaybeAsync((payload: Payload) => handlerToApply(payload, state)(handlers.sort(handlerSortByOrder)))(payloadObject);
 
 /**
  * Setup handling of Reducers, Actions, SideEffects without Decorator,
@@ -296,7 +311,8 @@ function actionMetaHandler<
 >(instance: ProtoStore<State, EventScheme>) {
   return <Payload>(payload: Payload, state: State) =>
     (actions: MetaAction<State, Payload>[]) =>
-      actions.forEach((action) => {
+      actions
+        .forEach((action) => {
         const result = action.handler.call(instance, payload, state);
 
         instance.eventDispatcher.dispatch(result);
