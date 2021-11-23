@@ -15,7 +15,6 @@ export declare type HandlerFn<State extends Record<string, unknown> = Record<str
 export declare type ActionFn<State extends Record<string, unknown> = Record<string, unknown>, Payload = unknown> = HandlerFn<State, Payload, FoxEvent>;
 export declare type ReducerFn<State extends Record<string, unknown> = Record<string, unknown>, Payload = unknown> = HandlerFn<State, Payload, Partial<State>>;
 export declare type EffectFn<State extends Record<string, unknown> = Record<string, unknown>, Payload = unknown> = HandlerFn<State, Payload>;
-export declare const simplyReducer: <State extends Record<string, unknown>, K extends keyof State = keyof State>(fieldName: K) => ReducerFn<State, State[K]>;
 export declare type RequiredEventsOptions<EventName extends string | symbol = string> = {
     /**
      * Events which are nessesary to handle main event
@@ -32,6 +31,7 @@ export declare type RequiredEventsOptions<EventName extends string | symbol = st
  */
 export declare type EventHandlerOptions = {
     requiredEvents?: RequiredEventsOptions;
+    order?: number;
 };
 /**
  * Options for StoreAction for optimized handling

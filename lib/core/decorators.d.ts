@@ -10,7 +10,9 @@ import { ActionFn, EffectFn, EventHandlerOptions, EventSchemeType, IActionOption
  * @param {IActionOptions} [options]
  * @returns {MethodDecorator}
  */
-export declare function Action(eventName: string | string[], options?: IActionOptions, outputEventName?: string): <State extends Record<string, unknown>, Payload>(store: ProtoStore<State, EventSchemeType<State, any>>, propertyKey: string | symbol, { value: action }: TypedPropertyDescriptor<ActionFn<State, Payload>>) => void;
+export declare function Action(eventName: string | string[], options?: IActionOptions, outputEventName?: string): <State extends Record<string, unknown>, Payload>(store: ProtoStore<State, EventSchemeType<State, any>>, propertyKey: string | symbol, { value: action }: {
+    value?: ActionFn<State, Payload> | undefined;
+}) => void;
 /**
  * Reducer MethodDecorator for Store class, works by metadata of constructor.
  *

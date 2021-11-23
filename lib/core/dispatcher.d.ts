@@ -5,7 +5,7 @@ import { Observable, SchedulerLike } from 'rxjs';
  * @export
  * @class Event
  */
-export declare class FoxEvent<Payload = unknown> {
+export declare class FoxEvent<Payload = any> {
     name: string | symbol;
     payload?: Payload | Observable<Payload> | Promise<Payload> | undefined;
     constructor(name: string | symbol, payload?: Payload | Observable<Payload> | Promise<Payload> | undefined);
@@ -24,5 +24,5 @@ export declare class Dispatcher {
     dispatch(event: FoxEvent): void;
     listen(...eventNames: (string | symbol)[]): Observable<FoxEvent>;
     emitDestroy(): void;
-    get destroy$(): Observable<FoxEvent<unknown>>;
+    get destroy$(): Observable<FoxEvent<any>>;
 }
