@@ -147,9 +147,9 @@ export const HandlerClassMap = {
 }
 
 export type RawEventConfig<State extends Record<string, unknown>, Payload> = {
-  actions?: [ActionFn<State, Payload>, IActionOptions][];
-  reducers?: [ReducerFn<State, Payload>, EventHandlerOptions][];
-  effects?: [EffectFn<State, Payload>, EventHandlerOptions][];
+  actions?: ([ActionFn<State, Payload>, IActionOptions] | [ActionFn<State, Payload>])[];
+  reducers?: ([ReducerFn<State, Payload>, EventHandlerOptions] | [ReducerFn<State, Payload>])[];
+  effects?: ([EffectFn<State, Payload>, EventHandlerOptions] | [EffectFn<State, Payload>])[];
 };
 
 export class EventConfig<
