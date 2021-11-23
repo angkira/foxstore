@@ -1,7 +1,6 @@
 import 'reflect-metadata';
 
-import { assocPath } from 'ramda';
-
+import { writeAs } from '../helpers';
 import { Dispatcher } from './dispatcher';
 import { setupEventsSchemeFromDecorators } from './setup';
 import { ProtoStore } from './store';
@@ -83,19 +82,16 @@ export function Action(
       MetaAction,
     );
 
-    if (!options?.writeAs) {
+    if (!options || !options.writeAs) {
       return;
     }
 
     if (outputEventName) {
       Reducer(outputEventName)(store, `${propertyKey as string}writeAs`,
         {
-          value: (payload: unknown) =>
-            options?.writeAs ?
-              assocPath(options?.writeAs.split('.'), payload)({}) as Partial<State>
-              : {}
-          },
-        )
+          value: writeAs<State>(options?.writeAs)
+        },
+      )
     } else {
       throw new Error('You did not pass outputEventName for Action ' + (propertyKey as string));
     }
