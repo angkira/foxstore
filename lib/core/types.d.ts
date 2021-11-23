@@ -85,9 +85,9 @@ export declare const HandlerClassMap: {
     effects: typeof MetaEffect;
 };
 export declare type RawEventConfig<State extends Record<string, unknown>, Payload> = {
-    actions?: [ActionFn<State, Payload>, IActionOptions][];
-    reducers?: [ReducerFn<State, Payload>, EventHandlerOptions][];
-    effects?: [EffectFn<State, Payload>, EventHandlerOptions][];
+    actions?: ([ActionFn<State, Payload>, IActionOptions] | [ActionFn<State, Payload>])[];
+    reducers?: ([ReducerFn<State, Payload>, EventHandlerOptions] | [ReducerFn<State, Payload>])[];
+    effects?: ([EffectFn<State, Payload>, EventHandlerOptions] | [EffectFn<State, Payload>])[];
 };
 export declare class EventConfig<State extends Record<string, unknown> = Record<string, unknown>, Payload = unknown | void> {
     [HandlerName.Action]?: MetaAction<State, Payload>[];

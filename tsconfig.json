@@ -1,14 +1,14 @@
 {
-    "compilerOptions": {
-      "target": "es2015",
-      "module": "commonjs",
-      "experimentalDecorators": true,
-      "emitDecoratorMetadata": true,
-      "declaration": true,
-      "outDir": "./lib",
-      "strict": true,
-      "lib": ["es2020", "DOM"]
-    },
-    "include": ["src"],
-    "exclude": ["node_modules", "**/__tests__/*"]
-  }
+  "compilerOptions": {
+    "target": "es2015",
+    "module": "commonjs",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "declaration": true,
+    "outDir": "./lib",
+    "strict": true,
+    "lib": ["es2020", "DOM"]
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "**/__tests__/*", "src/example.ts"]
+}
