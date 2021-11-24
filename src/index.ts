@@ -1,2 +1,2 @@
-export * as core from './core';
-export * as saving from './saving';
+export * from './core';
+export * from './saving';
