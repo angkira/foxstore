@@ -1,10 +1,11 @@
 import 'reflect-metadata';
 
-import { identity, indexBy, isEmpty, mergeDeepRight, path, prop } from 'ramda';
+import { identity, indexBy, isEmpty, path, prop } from 'ramda';
 import { BehaviorSubject, Observable, pipe } from 'rxjs';
 import { distinctUntilChanged, map, shareReplay, take, takeUntil } from 'rxjs/operators';
 
 import { InitSaver } from '../saving/saver';
+import { deepMerge } from './../helpers';
 import { Dispatcher, FoxEvent } from './dispatcher';
 import { DefaultStoreOptions, EntityToLog, StoreOptions } from './options';
 import { setupEventsSchemeFromDecorators, setupStoreEvents } from './setup';
@@ -100,7 +101,8 @@ export class ProtoStore<
     const oldValue = this.snapshot;
 
     const patchedState = Object.assign(
-      mergeDeepRight<State, Partial<State>>(this.snapshot, update),
+      // mergeDeepRight<State, Partial<State>>(this.snapshot, update),
+      deepMerge(this.snapshot, update),
       this.options?.hashMap?.on ? this.getHashMap(update) : {}
     );
 

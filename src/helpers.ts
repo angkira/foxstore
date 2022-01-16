@@ -57,3 +57,30 @@ export const mapObject: MapObject = <
       },
       {} as Record<K, NV | V>
     );
+
+export const deepMerge = <T, K extends keyof T>(
+  target: Partial<T>,
+  source: Partial<T>,
+): Partial<T> =>
+  Object.keys(source).length === 0
+    ? {}
+    : (Object.entries(source) as [K, T[K]][])
+      .reduce((
+        result: Partial<T>,
+        [key, value]: [K, T[K]],
+      ) => {
+        if (typeof value === 'object') {
+          // @ts-ignore
+          result[key] = deepMerge({}, value);
+
+          Object.setPrototypeOf(result[key], Object.getPrototypeOf(value));
+        } else {
+          result[key] = value;
+        }
+
+        return result;
+      },
+        Object.setPrototypeOf(
+          deepMerge({}, target),
+          Object.getPrototypeOf(source),
+        ) as Partial<T>);
