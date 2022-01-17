@@ -69,7 +69,7 @@ export const deepMerge = <T, K extends keyof T>(
         result: Partial<T>,
         [key, value]: [K, T[K]],
       ) => {
-        if (typeof value === 'object') {
+        if (typeof value === 'object' && value !== null) {
           // @ts-ignore
           result[key] = deepMerge({}, value);
 
