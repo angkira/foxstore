@@ -62,7 +62,7 @@ export const deepMerge = <T, K extends keyof T>(
   target: Partial<T>,
   source: Partial<T>,
 ): Partial<T> =>
-  Object.keys(source).length === 0
+  !source && Object.keys(source).length === 0
     ? {}
     : (Object.entries(source) as [K, T[K]][])
       .reduce((
