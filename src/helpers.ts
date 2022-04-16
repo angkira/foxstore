@@ -1,5 +1,6 @@
 import { assocPath } from 'ramda';
-import { isObservable, Observable, Observer, Subscription, take } from 'rxjs';
+import { isObservable, Observable, PartialObserver, Subscription } from 'rxjs';
+import { take } from 'rxjs/operators';
 
 import { MaybeAsync } from './core/types';
 
@@ -10,10 +11,9 @@ export const writeAs =
   (payload: unknown, state: State): Partial<State> =>
     assocPath(path.split('.'), payload)({}) as Partial<State>;
 
-export const handleStreamOnce =
-  <T>(observer: Partial<Observer<T>>) =>
-  (stream$: Observable<T>) =>
-    stream$.pipe(take(1)).subscribe(observer);
+export const handleStreamOnce = <T>(observer: PartialObserver<T>) =>
+    (stream$: Observable<T>) =>
+      observer && stream$.pipe(take(1)).subscribe(observer);
 
 export const applyCallbackToMaybeAsync =
   <Entity, Result>(fn: (agr: Entity) => Result) =>
