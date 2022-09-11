@@ -9,6 +9,7 @@ import { Dispatcher, FoxEvent } from './dispatcher';
 import { DefaultStoreOptions, EntityToLog, StoreOptions } from './options';
 import { setupEventsSchemeFromDecorators, setupStoreEvents } from './setup';
 import { EventSchemeType, STORE_DECORATED_METAKEY } from './types';
+import { deepMerge } from '../helpers';
 
 /**
  * Parent class that contains all basic methods of Store
@@ -101,8 +102,8 @@ export class ProtoStore<
 
     const patchedState = Object.assign(
 //       mergeDeepRight<State, Partial<State>>(this.snapshot, update),
-      // deepMerge(this.snapshot, update),
-            Object.assign({}, oldValue, update),
+      deepMerge(this.snapshot, update),
+            // Object.assign({}, oldValue, update),
       this.options?.hashMap?.on ? this.getHashMap(update) : {}
     );
 
