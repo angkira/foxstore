@@ -8,9 +8,10 @@ export type EntityToLog = HandlerName | "events" | "state";
 export type LogOptions = {
   logger?: (...args: unknown[]) => void;
   logOn?: boolean;
+  reduxDevTools?: boolean;
 } & {
-  [entity in EntityToLog]?: boolean;
-};
+    [entity in EntityToLog]?: boolean;
+  };
 
 export interface HashMapOptions {
   on?: boolean;
@@ -35,5 +36,6 @@ export const DefaultStoreOptions: StoreOptions<any> = {
     events: true,
     logOn: false,
     logger: console.log,
+    reduxDevTools: false,
   },
 };

@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 
-import { identity, indexBy, isEmpty, mergeDeepRight, path, prop } from 'ramda';
+import { identity, indexBy, isEmpty, path, prop } from 'ramda';
 import { BehaviorSubject, Observable, pipe } from 'rxjs';
 import { distinctUntilChanged, map, shareReplay, take, takeUntil } from 'rxjs/operators';
 
@@ -10,6 +10,7 @@ import { DefaultStoreOptions, EntityToLog, StoreOptions } from './options';
 import { setupEventsSchemeFromDecorators, setupStoreEvents } from './setup';
 import { EventSchemeType, STORE_DECORATED_METAKEY } from './types';
 import { deepMerge } from '../helpers';
+import { setupReduxDevtoolsBinding } from './redux-devtools.plugin';
 
 /**
  * Parent class that contains all basic methods of Store
@@ -50,6 +51,8 @@ export class ProtoStore<
       && setupStoreEvents<State, EventScheme>(eventScheme)(this);
 
     options.saving?.saver && this.initSaving();
+
+    options.logOptions?.reduxDevTools && setupReduxDevtoolsBinding(initState, this)
   }
 
   private initSaving(): void {
@@ -80,6 +83,20 @@ export class ProtoStore<
   }
 
   /**
+   * Selecting the whole stream with data from Store.
+   *
+   * @returns {Observable<State | {}>}
+   * @memberof ProtoStore
+   */
+  selectAll(): Observable<State | {}> {
+    return pipe(
+      distinctUntilChanged(),
+      takeUntil<State | {}>(this.eventDispatcher.destroy$),
+      shareReplay(1)
+    )(this.store$.asObservable());
+  }
+
+  /**
    * Hack to get current value of Store as Object
    *
    * @readonly
@@ -101,17 +118,16 @@ export class ProtoStore<
     const oldValue = this.snapshot;
 
     const patchedState = Object.assign(
-//       mergeDeepRight<State, Partial<State>>(this.snapshot, update),
+      //       mergeDeepRight<State, Partial<State>>(this.snapshot, update),
       deepMerge(this.snapshot, update),
-            // Object.assign({}, oldValue, update),
+      // Object.assign({}, oldValue, update),
       this.options?.hashMap?.on ? this.getHashMap(update) : {}
     );
 
     this.store$.next(patchedState);
 
-    const storeName: string = `${
-      String(this.options?.storeName || this['constructor'].name)
-    }`;
+    const storeName: string = `${String(this.options?.storeName || this['constructor'].name)
+      }`;
 
     this.log(
       {
@@ -238,7 +254,7 @@ export class ProtoStore<
             mapObject: Record<string, any>,
             entity: { name: keyof State; value: Record<string, any> }
           ) => {
-            mapObject[`${entity.name}_Map`] = entity.value;
+            mapObject[`${String(entity.name)}_Map`] = entity.value;
             return mapObject;
           },
           {}
