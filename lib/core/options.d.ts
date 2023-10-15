@@ -1,10 +1,11 @@
 import { SchedulerLike } from 'rxjs';
 import { SaverOptions } from '../saving/saver';
 import { HandlerName } from './types';
-export declare type EntityToLog = HandlerName | "events" | "state";
-export declare type LogOptions = {
+export type EntityToLog = HandlerName | "events" | "state";
+export type LogOptions = {
     logger?: (...args: unknown[]) => void;
     logOn?: boolean;
+    reduxDevTools?: boolean;
 } & {
     [entity in EntityToLog]?: boolean;
 };

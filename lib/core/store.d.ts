@@ -34,6 +34,13 @@ export declare class ProtoStore<State extends Record<string, unknown> = Record<s
      */
     select<K extends keyof State>(entityName: K): Observable<State[K]>;
     /**
+     * Selecting the whole stream with data from Store.
+     *
+     * @returns {Observable<State | {}>}
+     * @memberof ProtoStore
+     */
+    selectAll(): Observable<State | {}>;
+    /**
      * Hack to get current value of Store as Object
      *
      * @readonly

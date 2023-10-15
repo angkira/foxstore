@@ -1,5 +1,5 @@
 import { assocPath } from 'ramda';
-import { isObservable, Observable, PartialObserver, Subscription } from 'rxjs';
+import { isObservable, Observable, PartialObserver, Subscription, Subject } from 'rxjs';
 import { take } from 'rxjs/operators';
 
 import { MaybeAsync } from './core/types';
@@ -70,10 +70,20 @@ export const deepMerge = <T, K extends keyof T>(
         [key, value]: [K, T[K]],
       ) => {
         if (typeof value === 'object' && value !== null) {
-          // @ts-ignore
-          result[key] = deepMerge({}, value);
+          const prototype = Object.getPrototypeOf(value);
 
-          Object.setPrototypeOf(result[key], Object.getPrototypeOf(value));
+          let blank: any = {};
+
+          try {
+            blank = new prototype.constructor();
+          } catch (e: unknown) {
+            blank = {};
+          }
+
+          // @ts-ignore
+          result[key] = deepMerge(blank, value);
+
+          Object.setPrototypeOf(result[key], blank);
         } else {
           result[key] = value;
         }
@@ -81,6 +91,27 @@ export const deepMerge = <T, K extends keyof T>(
         return result;
       },
         Object.setPrototypeOf(
-          deepMerge({}, target),
+          deepMerge(((value: any) => {
+            if (typeof value !== 'object' || value === null) {
+              return {};
+            }
+            
+            const prototype = Object.getPrototypeOf(value);
+
+            let blank: any = {};
+
+            try {
+              blank = new prototype.constructor();
+            } catch (e: unknown) {
+              blank = {};
+            }
+
+            return blank;
+          })(target), target),
           Object.getPrototypeOf(source),
         ) as Partial<T>);
+
+Object.assign(window, {
+  deepMerge,
+  Subject,
+})
