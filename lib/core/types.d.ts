@@ -4,18 +4,18 @@ export declare const REDUCER_METAKEY = "@StoreReducers";
 export declare const ACTION_METAKEY = "@StoreActions";
 export declare const EFFECT_METAKEY = "@StoreEffects";
 export declare const STORE_DECORATED_METAKEY = "@Store";
-export declare type MaybeAsync<T> = Observable<T> | Promise<T> | T;
+export type MaybeAsync<T> = Observable<T> | Promise<T> | T;
 export declare enum HandlerName {
     Action = "actions",
     Reducer = "reducers",
     Effect = "effects"
 }
 export declare const HandlerNameList: HandlerName[];
-export declare type HandlerFn<State extends Record<string, unknown> = Record<string, unknown>, Payload = unknown, ReturnType = void> = (payload: Payload, state: State) => ReturnType;
-export declare type ActionFn<State extends Record<string, unknown> = Record<string, unknown>, Payload = unknown> = HandlerFn<State, Payload, FoxEvent>;
-export declare type ReducerFn<State extends Record<string, unknown> = Record<string, unknown>, Payload = unknown> = HandlerFn<State, Payload, Partial<State>>;
-export declare type EffectFn<State extends Record<string, unknown> = Record<string, unknown>, Payload = unknown> = HandlerFn<State, Payload>;
-export declare type RequiredEventsOptions<EventName extends string | symbol = string> = {
+export type HandlerFn<State extends Record<string, unknown> = Record<string, unknown>, Payload = unknown, ReturnType = void> = (payload: Payload, state: State) => ReturnType;
+export type ActionFn<State extends Record<string, unknown> = Record<string, unknown>, Payload = unknown> = HandlerFn<State, Payload, FoxEvent>;
+export type ReducerFn<State extends Record<string, unknown> = Record<string, unknown>, Payload = unknown> = HandlerFn<State, Payload, Partial<State>>;
+export type EffectFn<State extends Record<string, unknown> = Record<string, unknown>, Payload = unknown> = HandlerFn<State, Payload>;
+export type RequiredEventsOptions<EventName extends string | symbol = string> = {
     /**
      * Events which are nessesary to handle main event
      */
@@ -29,7 +29,7 @@ export declare type RequiredEventsOptions<EventName extends string | symbol = st
 /**
  * Common Event-handlers options
  */
-export declare type EventHandlerOptions = {
+export type EventHandlerOptions = {
     requiredEvents?: RequiredEventsOptions;
     order?: number;
 };
@@ -38,7 +38,7 @@ export declare type EventHandlerOptions = {
  *
  * @interface IActionOptions
  */
-export declare type IActionOptions = EventHandlerOptions & {
+export type IActionOptions = EventHandlerOptions & {
     writeAs?: string;
 };
 export interface HandlerType<State extends Record<string, unknown>, Payload> {
@@ -84,7 +84,7 @@ export declare const HandlerClassMap: {
     reducers: typeof MetaReducer;
     effects: typeof MetaEffect;
 };
-export declare type RawEventConfig<State extends Record<string, unknown>, Payload> = {
+export type RawEventConfig<State extends Record<string, unknown>, Payload> = {
     actions?: ([ActionFn<State, Payload>, IActionOptions] | [ActionFn<State, Payload>])[];
     reducers?: ([ReducerFn<State, Payload>, EventHandlerOptions] | [ReducerFn<State, Payload>])[];
     effects?: ([EffectFn<State, Payload>, EventHandlerOptions] | [EffectFn<State, Payload>])[];
@@ -96,8 +96,8 @@ export declare class EventConfig<State extends Record<string, unknown> = Record<
     payload?: Payload;
     constructor(eventName: string | symbol, config?: RawEventConfig<State, Payload>);
 }
-export declare type EventSchemeType<State extends Record<string, unknown>, Payload = any> = Record<string | symbol, EventConfig<State, Payload>>;
-export declare type EventSchemeKeys<State extends Record<string, unknown>, Scheme extends EventSchemeType<State>> = Exclude<keyof Scheme, number> | string | symbol;
-export declare type EventConfigByName<State extends Record<string, unknown> = Record<string, unknown>, Payload = unknown | void> = {
+export type EventSchemeType<State extends Record<string, unknown>, Payload = any> = Record<string | symbol, EventConfig<State, Payload>>;
+export type EventSchemeKeys<State extends Record<string, unknown>, Scheme extends EventSchemeType<State>> = Exclude<keyof Scheme, number> | string | symbol;
+export type EventConfigByName<State extends Record<string, unknown> = Record<string, unknown>, Payload = unknown | void> = {
     [eventName: string | symbol]: EventConfig<State, Payload>;
 };

@@ -6,7 +6,7 @@ export interface Saver<State extends Record<string, unknown>> {
     save(state: Partial<State>): MaybeAsync<void | Error>;
     restore(): MaybeAsync<Partial<State> | Error | null>;
 }
-declare type SaverByKey<State extends Record<string, unknown>, K extends keyof State = keyof State, Value extends State[K] & Record<string, unknown> = State[K] & Record<string, unknown>> = {
+type SaverByKey<State extends Record<string, unknown>, K extends keyof State = keyof State, Value extends State[K] & Record<string, unknown> = State[K] & Record<string, unknown>> = {
     [key in K]: Saver<Value>;
 };
 export interface SaverOptions<State extends Record<string, unknown>> {
@@ -42,6 +42,6 @@ export declare class RestoringSuccess<State> extends FoxEvent<Partial<State> | {
 export declare class RestoringError<State> extends FoxEvent<Partial<State> | {} | null> {
     constructor(unsavedState: Partial<State> | {} | null);
 }
-export declare const InitSaver: <State extends Record<string, unknown>>(store: ProtoStore<State, import("../core/types").EventSchemeType<State, any>>) => (SaverClass: new (store: ProtoStore<State, import("../core/types").EventSchemeType<State, any>>) => Saver<State>) => void;
-export declare const GetSaverByKey: <State extends Record<string, unknown>>(key: 'localStorage' | 'indexedDB', store: ProtoStore<State, import("../core/types").EventSchemeType<State, any>>) => LocalStorageSaver<State>;
+export declare const InitSaver: <State extends Record<string, unknown>>(store: ProtoStore<State, import("../core/types").EventSchemeType<State>>) => (SaverClass: new (store: ProtoStore<State, import("../core/types").EventSchemeType<State>>) => Saver<State>) => void;
+export declare const GetSaverByKey: <State extends Record<string, unknown>>(key: 'localStorage' | 'indexedDB', store: ProtoStore<State, import("../core/types").EventSchemeType<State>>) => LocalStorageSaver<State>;
 export {};
